@@ -1,0 +1,96 @@
+// "FLEXI"-Related Attribute MetaData (add to metadata after capabilities)
+    attribute "sceneLevel", "number"
+    attribute "sceneSwitch", "string"
+    attribute "sceneName", "string"
+    attribute "offTime", "number"
+//  -------------------------------
+	
+	
+	
+// "FLEXI"-Related Command MetaData (add to metadata with other commands after attributes)
+		command "setOffTime"
+		command "setScName"       
+    command "saveScene"
+    command "setScSwitch"
+    command "sceneManual"
+    command "sceneFree"
+    command "sceneSlave"
+    command "sceneMaster"
+    command "setLevelFromThing"
+// ------------------------------
+
+
+
+// "FLEXI"-Related Commands (generally add to end of device code)
+
+def setScSwitch(String inState) {
+	log.debug "FlexiAeonDimmer: Executing 'setScSwitch(${inState})'"
+	sendEvent (name: "sceneSwitch", value: inState, isStateChange: true)
+        	          
+}
+
+def sceneManual() {
+//	log.debug "FlexiAeonDimmer: sceneManual setting sceneSwitch to: MANUAL."  
+
+    def curLevel = device.currentValue("level")
+    setScLevel(curLevel)
+    def curSat = device.currentValue("saturation")
+    setScSat(curSat)
+    def curHue = device.currentValue("hue")
+    setScHue(curHue)
+
+	def newValue = "Manual" as String
+    setScSwitch(newValue)
+
+}
+
+def sceneFree() {
+//	log.debug "FlexiAeonDimmer: sceneFree setting sceneSwitch to: FREEEEEE."
+	def newValue = "Freebie" as String
+   	setScSwitch(newValue)
+	refresh()    
+}
+
+def sceneSlave() {
+//	log.debug "FlexiAeonDimmer: sceneSlave setting sceneSwitch to: SLAVE."  
+	def newValue = "Slave" as String
+ 	setScSwitch(newValue)
+	refresh()
+}
+
+def saveScene(Number inValue, String inMode, Number inOffTime) {
+
+	log.debug "FlexiAeonDimmer: saveScene:"
+
+    if ( inMode ) {
+		log.debug "sceneName to: ${inMode}"
+	    sendEvent(name: "sceneName", value: inMode, isStateChange: true)
+    }	
+
+    if ( inOffTime ) {
+  		if ( inOffTime == 0 ) {
+			log.debug "Setting offTime to: default 30 b/c inOffTime is 0."
+		    sendEvent(name: "offTime", value: 30, isStateChange: true)
+    	} else {
+			log.debug "Setting offTime to: ${inOffTime}"
+		    sendEvent(name: "offTime", value: inOffTime, isStateChange: true)
+    	}	
+	}
+
+	if ( inValue ) {
+		sendEvent(name: "sceneLevel", value: inValue)
+        log.debug "Setting sceneLevel to: ${inValue}."        
+	}
+	
+}
+
+def setLevelFromThing(Number inValue) {
+
+//	log.debug "FlexiAeonDimmer: setLevelfromThing setting sceneSwitch to: Manual."  
+	def newValue = "Manual" as String
+    setScSwitch(newValue)
+
+	setLevel(inValue, 3)
+}
+
+// ----------------------------------
