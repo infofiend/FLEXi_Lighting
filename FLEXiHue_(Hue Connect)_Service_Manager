@@ -532,7 +532,7 @@ def parse(childDevice, description) {
 		def bodyString = new String(parsedEvent.body.decodeBase64())
 		log.debug "parse() - ${bodyString}"
 		def body = new groovy.json.JsonSlurper().parseText(bodyString)
-		log.debug "APSM: BODY - $body"
+		log.debug "FLEXiHue SM: BODY - $body"
 		if (body instanceof java.util.HashMap)
 		{ //poll response
 			def bulbs = getChildDevices()
