@@ -7,7 +7,7 @@
  *  Version 1.0 (2015-5-1)
  *
  *  The latest version of this file can be found at:
- *  https://github.com/infofiend/FLEXI_Lighting/Lighting_Scenes
+ *  https://github.com/infofiend/FLEXI_Lighting/FLEXi_Scenes
  *
  *  --------------------------------------------------------------------------
  *
@@ -140,7 +140,7 @@ def textConfig1 =
     		 paragraph textConfig1 
         }     
     
-		section("1: Modes") {
+	section("1: Modes") {
             input inputModes
         }
         section("2: Master Hue") {
@@ -156,7 +156,7 @@ def textConfig1 =
         }
         section("5: Switches") {        
             input inputSwitches
-		}
+	}
         
         section {
             href "pageAbout", title:"About", description:"Tap to open"
@@ -180,8 +180,8 @@ private def pageAbout() {
         "Hue Bulbs (use the FlexiHue (Connect) SmartApp to create " +
         "FlexiHue devices), Dimmers (use a FlexiDimmer device " +
         "type), and/or Switches (use any). " +
-		"        -------------------------------------                                        " +
-		"You can find the code for the FLEXI devices and the FLEXI Trigger SmartApp at "+
+	"        -------------------------------------                                        " +
+	"You can find the code for the FLEXI devices and the FLEXI Trigger SmartApp at "+
         "https://github.com/infofiend/FLEXI_Lighting   ." 
 
     def pageProperties = [
@@ -222,7 +222,7 @@ private def pageConfigure() {
         " -- MODE TRIGGER: If you want a Mode change to turn on lights that are    " +
         "                  currently off, then select 'yes'. If you select 'no',   " +
         "                  your the scene values will still be saved, and will be  " +
-        "                  ready for use by a trigger from the FLEXI TRIGGER APP.     "
+        "                  ready for use by a trigger from the FLEXI TRIGGER App.     "
 
     def pageProperties = [
         name        : "pageConfigure",
