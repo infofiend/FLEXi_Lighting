@@ -58,7 +58,7 @@ preferences {
 	}
     section("Select Hues, Dimmer Lights, and/or Switches to turn on..."){
         input "hues", "capability.testCapability", multiple: true, title: "Select Hues", required: false
-		input "dimmers", "device.pdimmer", multiple: true, title: "Select Dimmers", required: false        
+		input "dimmers", "device.flexidimmer", multiple: true, title: "Select Dimmers", required: false        
         input "switches", "capability.switch", multiple: true, title: "Select Switches", required: false
 	}
 	section("Select default settings (used if no scene or manual settings):"){
