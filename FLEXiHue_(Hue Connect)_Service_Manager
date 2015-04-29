@@ -546,13 +546,13 @@ def parse(childDevice, description) {
 		            	sendEvent(d.deviceNetworkId, [name: "switch", value: bulb.value?.state?.on ? "on" : "off"])
 		            	sendEvent(d.deviceNetworkId, [name: "level", value: Math.round(bulb.value.state.bri * 100 / 255)])
 /**						if (bulb.value.state.sceneSwitch != null) {
-                        	log.debug "APSM: updating b/c bulb.value.state.sceneSwitch != null."
+                        	log.debug "FLEXiHue SM: updating b/c bulb.value.state.sceneSwitch != null."
                             log.debug "bulb.value.state.offTime is ${bulb.value.state.offTime}, bulb.value.state.sceneSwitch is ${bulb.value.state.sceneSwitch}, and bulb.value.state.sceneName is ${bulb.value.state.sceneName}."
 	                        sendEvent(d.deviceNetworkId, [name: "offTime", value: bulb.value.state.offTime])
 			            	sendEvent(d.deviceNetworkId, [name: "sceneSwitch", value: bulb.value.state.sceneSwitch])                                                      
 			            	sendEvent(d.deviceNetworkId, [name: "sceneName", value: bulb.value.state.sceneName])   
             			} else {
-	                        log.debug "APSM: replacing b/c bulb.value.state.sceneSwitch == null."
+	                        log.debug "FLEXiHue SM: replacing b/c bulb.value.state.sceneSwitch == null."
 	                        sendEvent(d.deviceNetworkId, [name: "offTime", value: 15])
 			            	sendEvent(d.deviceNetworkId, [name: "sceneSwitch", value: "current"])                                                      
 			            	sendEvent(d.deviceNetworkId, [name: "sceneName", value: "-none-"])   	
