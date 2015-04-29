@@ -1,0 +1,447 @@
+/** FLEXi LIGHTING TRIGGERS
+	
+    
+	Version 1.0 (2015-4-29)
+ 
+   The latest version of this file can be found at:
+   https://github.com/infofiend/FLEXi_Lighting/FLEXi_Triggers
+ 
+
+   --------------------------------------------------------------------------
+ 
+   Copyright (c) 2015 Anthony Pastor
+ 
+   This program is free software: you can redistribute it and/or modify it
+   under the terms of the GNU General Public License as published by the Free
+   Software Foundation, either version 3 of the License, or (at your option)
+   any later version.
+ 
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+   for more details.
+ 
+   You should have received a copy of the GNU General Public License along
+   with this program.  If not, see <http://www.gnu.org/licenses/>.
+   
+ **/
+
+definition(
+    name: "FLEXi Triggers",
+    namespace: "info_fiend",
+    author: "Anthony Pastor",
+    description: "If selected virtual presence switch (use device type FlexiState) is ON,           " +
+    			 "this SmartApp will turn on the selected lights (use device types FLEXiHue, " +
+                 "FLEXiDimmer, and any type of basic switch).  This SmartApp will check the        " +
+                 "FLEXiHue and FLEXiDimmer devices for scene settings (stored by the FLEXi Lighting   " +
+                 "Scenes App) or manually-entered settings (entered in a FLEXi light's individual device tile.   " +
+                 "         ---------------------------------------------------------------       " +
+                 "Once a triggering event occurs, the correct color and levels (from your Scene or Manual settings) " +
+                 "will be used.  In addition, the app asks the user for default settings to use, in the case " +
+                 "neither Scene or Manual settings can be found.                                                    " +
+                 "Finally, this SmartApp will turn off the lights based on the no-motion time limits (either from " +
+                 "the FLEXi Lighting Scene app or from user's default settings in this app.",
+    category: "Convenience",
+	iconUrl: "https://dl.dropboxusercontent.com/u/2403292/Lightbulb.png",
+    iconX2Url: "https://dl.dropboxusercontent.com/u/2403292/Lightbulb%20large.png")
+
+preferences {
+	section("Select Presence Switch:"){
+		input "someoneHome", "device.flexistate", multiple: false, required: true
+	}
+    
+    section("Select motion detector(s):"){
+		input "motions", "capability.motionSensor", multiple: true, required: false
+	}
+	section("Select contact sensor(s):"){
+		input "contacts", "capability.contactSensor", multiple: true, required: false
+	}
+    section("Select Hues, Dimmer Lights, and/or Switches to turn on..."){
+        input "hues", "capability.testCapability", multiple: true, title: "Select Hues", required: false
+		input "dimmers", "device.pdimmer", multiple: true, title: "Select Dimmers", required: false        
+        input "switches", "capability.switch", multiple: true, title: "Select Switches", required: false
+	}
+	section("Select default settings (used if no scene or manual settings):"){
+		input "defLevel", "number", title: "Default Hue / Dimmer Level:", required: true, defaultValue: 99
+        input "defColor", "enum", title: "Default Hue Color:", required: true, multiple:false, metadata: [values:
+					["Warm", "Soft", "Normal", "Daylight", "Red", "Green", "Blue", "Yellow", "Orange", "Purple", "Pink"]], defaultValue: "Warm"
+        input "defSwitch", "enum", title: "Default Switch State:", metadata:[values: ["yes", "no"]], required:true, defaultValue: "no"
+		input "defOffTime", "number", title: "Default No Motion OffTime (minutes):", required: true, defaultValue: 30 	        
+	}
+}
+
+
+def installed()
+{
+	state.someoneHome = false
+	initialize()
+	schedule("0 * * * * ?", "scheduleCheck")
+}
+
+
+def updated()
+{
+	unsubscribe()
+	initialize()
+    
+
+}
+
+def initialize()
+{
+	state.inactiveAt = null
+	state.allGroup = []   
+	state.offTime = defOffTime
+    
+	subscribe(someoneHome, "switch", switchHome)
+    
+    if (motions) {
+    	subscribe(motions, "motion", motionHandler)
+    }
+    if (contacts) {
+    	subscribe(contacts, "contact", contactHandler)
+    }
+
+	subscribe(location, onLocation)
+
+    checkHome()
+    colorCheck()
+
+}
+
+
+def switchHome(evt) {
+//	log.debug "switchHome: $evt.name: $evt.value"
+    if (evt.value == "on") {
+		state.someoneHome = true
+    } else {
+    	state.someoneHome = false
+    }
+}
+
+
+def checkHome() {
+
+   	if (someoneHome.currentValue("switch") == "on") {
+//   		log.debug "checkHome: state someoneHome is now ON." 
+        state.someoneHome = true
+    } else {
+//   		log.debug "checkHome: state someoneHome is now OFF." 
+        state.someoneHome = false
+    }
+
+	def foundOff = null
+
+	if (hues) {
+
+        foundOff = hues.find{it.currentValue("offTime") > 0 }
+		state.offTime = foundOff.currentValue("offTime") ?: defOffTime 
+     
+	}
+}      
+
+
+def colorCheck() {
+
+	def valueColor = defColor as String
+    def newHue = 23
+    def newSat = 56
+    
+	switch(valueColor) {
+				
+		case "Normal":
+			newHue = 52
+			newSat = 19
+			break;
+						
+		case "Daylight":
+			newHue = 53
+			newSat = 91
+			break;
+                            
+		case "Soft":
+			newHue = 23
+			newSat = 56
+			break;
+        	                
+		case "Warm":
+			newHue = 20
+			newSat = 80 //83
+			break;
+    	                    
+		case "Blue":
+			newHue =  70
+			newSat = 100
+           	break;
+                        
+		case "Green":
+			newHue = 39
+    	    newSat = 100
+			break;
+                        
+		case "Yellow":
+        	newHue = 25
+			newSat = 100			
+    	   	break;
+        	                
+		case "Orange":
+			newHue  = 10
+			newSat = 100
+			break;
+                        
+		case "Purple":
+			newHue = 75
+			newSat = 100
+	        break;
+                        
+		case "Pink":
+			newHue = 83
+			newSat = 100
+		    break;
+                        
+		case "Red":
+			newHue = 100
+			newSat = 100                       
+			break;
+                        
+	}
+
+	state.defHue = newHue
+    state.defSat = newSat
+    
+}
+
+
+def turnON() {
+ 
+ 	def myScene = null
+	def masterLight = null    
+
+  masterLight = hues.find{it.currentValue("sceneSwitch") == "Master"}
+        
+  if (masterLight) {
+
+	 	state.masterLevel = masterLight.currentValue("sceneLevel") as Number
+  	state.masterHue = masterLight.currentValue("sceneHue") as Number            
+	  state.masterSat = masterLight.currentValue("sceneSat") as Number            
+	  
+	} else {
+
+	  state.masterLevel = defLevel as Number
+    state.masterHue = state.defHue as Number
+    state.masterSat = state.defSat as Number
+    
+  }    
+
+	if (hues) {
+	
+    hues?.each {
+      def myHueLevel = null                         
+      def scnHue = null
+		  def scnSat = null
+            
+      if (it.currentValue("switch") == "off") {
+            
+	      myScene = it.currentValue("sceneSwitch")
+            
+			  if ( myScene == "Master" || myScene == "Slave" ) {
+
+		   		scnHue = state.masterHue as Number
+				  scnSat = state.masterSat as Number
+	        myHueLevel = state.masterLevel as Number
+                  
+    	    def newValueColor = [hue: scnHue, saturation: scnSat, level: myHueLevel, transitiontime: 2]
+    	    it.setColor(newValueColor)
+					
+			  } else if ( myScene == "Freebie") {
+            
+			 		scnHue = it.currentValue("sceneHue")    
+				  scnSat = it.currentValue("sceneSat")
+          myHueLevel = it.currentValue("sceneLevel") 
+                      
+				  def newValueColor = [hue: scnHue, saturation: scnSat, level: myHueLevel, transitiontime: 2]   		   			
+	        it.setColor(newValueColor)
+                
+			  } else if ( myScene == "Manual" ) {
+            
+          scnHue = it.currentValue("hue")    
+				  scnSat = it.currentValue("saturation")
+				  myHueLevel = it.currentValue("level")   		   			
+				
+    	    def newValueColor = [hue: scnHue, saturation: scnSat, level: myHueLevel, transitiontime: 2]   		   			
+ 	        it.setColor(newValueColor)
+
+	       } else { 
+            	
+    	    scnHue = state.defHue as Number    
+				  scnSat = state.defSat as Number    
+				  myHueLevel = defLevel as Number 
+        	if (myHueLevel > 99) {
+         		myHueLevel = 99
+	        }    
+		            
+    	    def newValueColor = [hue: scnHue, saturation: scnSat, level: myHueLevel, transitiontime: 2]
+ 	    	  it.setColor(newValueColor)                    
+
+        }
+		  }
+    }
+ }   
+ 
+ if (dimmers) {
+            
+    dimmers?.each {
+		def myDimLevel = null        
+            
+    if (it.currentValue("switch") == "off") {
+                             
+      myScene = it.currentValue("sceneSwitch")
+            
+			if ( myScene == "Master" || myScene == "Slave" ) {
+	
+        myDimLevel = state.masterLevel as Number
+	       it.setLevel(myDimLevel)		                                
+					
+			} else if ( myScene == "Freebie") {
+            					
+        myDimLevel = it.currentValue("sceneLevel") 
+	      it.setLevel(myDimLevel)		                                  
+	            
+			} else if ( myScene == "Manual" ) {
+            
+				myDimLevel = it.currentValue("level")   		   			
+	      it.setLevel(myDimLevel)		            					
+
+	    } else { 
+            	
+				myDimLevel = defLevel as Number 
+        if (myDimLevel > 99) {
+      	  myDimLevel = 99
+        }    
+        it.setLevel(myDimLevel)		            
+
+			}
+    }          
+	}
+
+  if (switches) {
+    	
+    switches?.each {
+    	if (it.currentValue("switch") == "off") {
+      	it.on()
+      }    
+		}
+  }    
+}
+
+
+                            // Handle motion events.
+def motionHandler(evt) {
+
+	if (state.someoneHome) {
+
+	    if (evt.value == "active") {
+
+			state.inactiveAt = null
+            turnON()           
+            
+        } else if (evt.value == "inactive") {
+    
+			// When motion ends, we reset the timer if not already set
+        	state.inactiveAt = now()
+          setActiveAndSchedule()
+        }       			   
+	}
+}
+
+                            // Handle contact events.
+def contactHandler(evt) {
+
+	if (state.someoneHome) {
+
+		if (evt.value == "open") {
+
+			state.inactiveAt = null
+			turnON()   
+            
+    } else {
+      
+      state.inactiveAt = now()
+    	setActiveAndSchedule()
+    	
+    }  
+	}
+}
+
+
+                              // Handle location events.
+def onLocation(evt) {
+
+	state.currentMode = evt.value
+  String mode = state.currentMode
+    
+  state.lastMode = state.currentMode
+	state.inactiveAt = now()
+	
+  checkHome()
+	setActiveAndSchedule() 
+
+}
+
+def setActiveAndSchedule() {
+    unschedule()
+    def mySchTime = state.offTime * 15
+    if (mySchTime < 300) {
+    	mySchTime = 300
+    }    
+	runIn (mySchTime, "scheduleCheck")  // check monitored lights every 1/4 of offTime limit (in seconds) BUT no less than every 5 minutes	    
+}
+
+def scheduleCheck() {
+    
+    if(state.inactiveAt != null) {
+		
+        def minutesOff = state.offTime 
+	    def elapsed = now() - state.inactiveAt
+	    def threshold = 60000 * minutesOff
+        log.debug "elapsed = ${elapsed} / threshold = ${threshold}."
+	    
+        if (elapsed >= threshold) {
+          
+            if (hues) {
+	            hues?.each {
+    	          	it.off()
+	    	    }
+            }
+            if (dimmers) {
+	            dimmers?.each {
+    	        	it.off
+        	    }    
+	        }
+            if (switches) {
+	            switches?.each {
+    	        	it.off
+        	    }    
+	        }
+            state.inactiveAt = null
+            
+	    } else {
+    
+			setActiveAndSchedule() 
+    	}
+    }    
+}
+
+
+
+
+private def TRACE(message) {
+    log.debug message
+}
+
+private def STATE() {
+    log.trace "settings: ${settings}"
+    log.trace "state: ${state}"
+}
+
+
