@@ -2,6 +2,7 @@
 Apps, devices, and extras for use with FLEXi Lighting Scenes &amp; Triggers
 
 --HOW TO INSTALL--
+
 1) copy the FLEXiHue (Hue Connect) Service Manager code and create it as a new SmartApp in the IDE.
 
 2) copy the FLEXiHue device code and create it as a new Device Type in the IDE.
