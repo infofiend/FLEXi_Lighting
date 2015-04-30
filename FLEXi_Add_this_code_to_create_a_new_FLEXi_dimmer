@@ -1,6 +1,7 @@
 // BE SURE TO CHANGE NAME OF DEVICE TO "flexidimmer" !!!!
 
 
+
 // "FLEXI"-Related Attribute MetaData (add to metadata after capabilities)
     attribute "sceneLevel", "number"
     attribute "sceneSwitch", "string"
