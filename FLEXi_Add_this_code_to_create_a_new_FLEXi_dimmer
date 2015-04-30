@@ -1,3 +1,6 @@
+// BE SURE TO CHANGE NAME OF DEVICE TO "flexidimmer" !!!!
+
+
 // "FLEXI"-Related Attribute MetaData (add to metadata after capabilities)
     attribute "sceneLevel", "number"
     attribute "sceneSwitch", "string"
@@ -79,7 +82,7 @@ def saveScene(Number inValue, String inMode, Number inOffTime) {
 
 	if ( inValue ) {
 		sendEvent(name: "sceneLevel", value: inValue)
-        log.debug "Setting sceneLevel to: ${inValue}."        
+        log.debug "Setting sceneLevel to: ${inValue.level}."        
 	}
 	
 }
