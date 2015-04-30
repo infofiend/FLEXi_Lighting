@@ -1,5 +1,5 @@
 /**
- * FLEXI LIGHTING SCENES
+ * FLEX LIGHTING SCENES
  *
  *
  *
@@ -7,7 +7,7 @@
  *  Version 1.0 (2015-4-28)
  *
  *  The latest version of this file can be found at:
- *  https://github.com/infofiend/FLEXI_Lighting/FLEXi_Scenes
+ *  https://github.com/infofiend/FLEXI_Lighting/Lighting_Scenes
  *
  *  --------------------------------------------------------------------------
  *
@@ -28,13 +28,12 @@
  */
 
 definition(
-    name: "FLEXI Lighting Scenes",
+    name: "FLEXi Lighting Scenes",
     namespace: "info_fiend",
     author: "Anthony Pastor",
     description: "FLEXI Lighting Scenes App:  Set-up & control lighting scenes with " +
-    		 "Hues (use FlexiHue device type), Dimmers (create FlexiDimmer device type " +
-    		 "by adding FLEXi code to your existing device type code), " +
-                 "and/or Switches (any Switch device will work).  For use with FLEXI Trigger App.  Find these" +
+    			 "Hues (use FlexiHue device type), Dimmers (use FlexiDimmer device type), " +
+                 "and/or Switches.  For use with accompanying FLEXI Trigger App.  Find these" +
                  "devices and smartapps at https://github.com/infofiend/FLEXI_Lighting ", 
     category: "Convenience",
 	iconUrl: "https://dl.dropboxusercontent.com/u/2403292/LR%20Scene.png",
@@ -43,28 +42,15 @@ definition(
 )
 
 preferences {
-    page name:"pageSetup"
+    page name:"pageSelect"
     page name:"pageAbout"
-    page name:"pageConfigure"
-    page name:"pageFreehues"
+    page name:"pageSettings"
+    page name:"pageOptions"    
 }
 
-// Show "Setup Menu" page
-private def pageSetup() {
-    TRACE("pageSetup()")
-
-
-def textConfig1 =	
-        "1: Select the Scenes (i.e., the Modes) that you want this app to use,                                                            " +
-        "2: Select a 'Master' Hue Light,                                              " +
-        "3: Select (optional) 'Slave' Hues (that will use the color and " +
-        "level settings of the 'Master' Hue) and/or any 'Free' Hues (that will " +
-        "have their own settings),       " +
-        "4: Select (optional) 'Slave' Dimmers (that will follow the color and " +
-        "level settings of the 'Master' Hue) and/or any 'Free' Dimmers (that will " +
-        "have their own color and level settings), and                                                " +
-        "5: Select (optional) any Switches. "
-
+// Show "Selection of Scenes and Devices" preference page
+private def pageSelect() {
+    TRACE("pageSelect()")
 
     if (state.installed == null) {
         // First run - initialize state
@@ -72,17 +58,36 @@ def textConfig1 =
         return pageAbout()
     }
 
+	def textSelect =	
+        "1: Select the Scenes (Modes) that you want this app to use,                                                                         " +
+        "2: Select a 'Master' Hue Light,                                              " +
+        "3: (optional) Select 'Slave' Hues (that will use the color and " +
+        "level settings of the 'Master' Hue) and/or any 'Free' Hues (that will " +
+        "have their own settings),       " +
+        "4: (optional) Select 'Slave' Dimmers (that will follow the color and " +
+        "level settings of the 'Master' Hue) and/or any 'Free' Dimmers (that will " +
+        "have their own color and level settings), and                                                " +
+        "5: (optional) Select any non-FLEXi Switches (functionality limited to simple on/off)."
+
+    def pageProperties = [
+        name        : "pageSelect",
+        title       : "Config Page 1: Select Scenes and Devices",
+        nextPage    : "pageSettings",
+        install     : false,
+        uninstall   : state.installed
+    ]
+    
 	def inputModes = [
         name        : "theModes",
         type        : "mode",
-        title       : "Select the INDIVIDUAL Modes that you want to apply ('All Modes' will not work):",
+        title       : "Select the INDIVIDUAL Scenes that you want to apply (Selecting 'All Modes' will not work):",
         multiple:   true,
         required:   true
     ]
     
     def inputHueMaster = [
         name        : "hueMaster",
-        type        : "capability.colorControl",
+        type        : "device.flexihueBulb",
         title       : "Select a 'Master' Hue light:",
         multiple:   false,
         required:   true
@@ -90,7 +95,7 @@ def textConfig1 =
 
     def inputHueSlaves = [
         name        : "hueSlaves",
-        type        : "capability.colorControl",
+        type        : "device.flexihueBulb",
         title       : "Select 'Slave' Hue lights (optional):",
         multiple:   true,
         required:   false
@@ -98,7 +103,7 @@ def textConfig1 =
 
     def inputHueFrees = [
         name        : "hueFrees",
-        type        : "capability.colorControl",
+        type        : "device.flexihueBulb",
         title       : "Select 'Free' Hue lights (optional):",
         multiple:   true,
         required:   false
@@ -106,7 +111,7 @@ def textConfig1 =
 
     def inputDimSlaves = [
         name        : "dimSlaves",
-        type        : "device.flexiaeondimmer",
+        type        : "device.flexidimmer",
         title       : "Select Slave Dimmers (optional):",
         multiple:   true,
         required:   false
@@ -114,7 +119,7 @@ def textConfig1 =
 
     def inputDimFrees = [
         name        : "dimFrees",
-        type        : "device.flexiaeondimmer",
+        type        : "device.flexidimmer",
         title       : "Select Free Dimmers (optional):",
         multiple:   true,
         required:   false
@@ -123,25 +128,17 @@ def textConfig1 =
     def inputSwitches = [
         name        : "switches",
         type        : "capability.switch",
-        title       : "Select additional Switches (optional):",
+        title       : "Select non-FLEXi Switches (optional):",
         multiple:   true,
         required:   false
     ]
 
-    def pageProperties = [
-        name        : "pageSetup",
-        title       : "Setup Menu",
-        nextPage    : "pageConfigure",
-        install     : false,
-        uninstall   : state.installed
-    ]
-
     return dynamicPage(pageProperties) {
-		section("Configuration Instructions") {
-    		 paragraph textConfig1 
+		section("Selection of Scenes and Devices", hideable:true, hidden: state.installed) {
+    		 paragraph textSelect 
         }     
     
-	section("1: Modes") {
+		section("1: Scenes") {
             input inputModes
         }
         section("2: Master Hue") {
@@ -157,15 +154,8 @@ def textConfig1 =
         }
         section("5: Switches") {        
             input inputSwitches
-	}
+		}
         
-        section {
-            href "pageAbout", title:"About", description:"Tap to open"
-        }
-        section([title:"Options", mobileOnly:true]) {
-            label title:"Assign a name", required:false
-           
-        }
     }
 }
 
@@ -181,14 +171,14 @@ private def pageAbout() {
         "Hue Bulbs (use the FlexiHue (Connect) SmartApp to create " +
         "FlexiHue devices), Dimmers (use a FlexiDimmer device " +
         "type), and/or Switches (use any). " +
-	"        -------------------------------------                                        " +
-	"You can find the code for the FLEXI devices and the FLEXI Trigger SmartApp at "+
+		"        -------------------------------------                                        " +
+		"You can find the code for the FLEXI devices and the FLEXI Trigger SmartApp at "+
         "https://github.com/infofiend/FLEXI_Lighting   ." 
 
     def pageProperties = [
         name        : "pageAbout",
-        title       : "About",
-        nextPage    : "pageSetup",
+        title       : "About FLEXi Lighting",
+        nextPage    : getNextPage(),
         install     : false,
         uninstall   : state.installed
     ]
@@ -206,76 +196,112 @@ private def pageAbout() {
     }
 }
 
-// Show "Configure Master Hue, Slave Hues, Dimmers and Switches" setup page
-private def pageConfigure() {
-    TRACE("pageConfigure()")
+def getNextPage() {
 
-    def textConfig2 =
+	def thePage = "pageSelect"
+    if (settings.hueMaster) {
+    	thePage = "pageOptions"
+    }
+    thePage
+}    
+
+
+// Show "Scene Settings" preference page
+private def pageSettings() {
+    TRACE("pageSettings()")
+
+    def textSettings =
         "For each Scene (Mode) you selected (prior page):                                       " +
-        "                                                                                         " +        
-        "1) Set the desired no-motion time limit; " +
-        "2) Set the 'Master' settings (Color, Level, and Mode Trigger - see below) " +
-        "3) Set the settings for any 'Free' Hues or 'Free' Dimmers; and                       " +
+        "    --------------------------------------------------------------------- " +        
+
+        "1) Set the desired no-motion time limit;                      " +
+        "2) Set the 'Master' settings (Color, Level, and Mode Trigger - see below)                                                      " +
+        "3) Set the settings for any 'Free' Hues or 'Free' Dimmers; and                                                               " +
         "4) Set the settings for any Switches.                                     " +
         "    --------------------------------------------------------------------- " +        
-        " -- LEVEL: Choose value between 0 (off) and 99 (default full brightness). " +
-        " -- COLOR: Choose any color (default is 'Warm'. " +        
-        " -- MODE TRIGGER: If you want a Mode change to turn on lights that are    " +
-        "                  currently off, then select 'yes'. If you select 'no',   " +
-        "                  your the scene values will still be saved, and will be  " +
-        "                  ready for use by a trigger from the FLEXI TRIGGER App.     "
+        " -- LEVEL: Choose value between 0 (off) and 99 (default full brightness).                                                   " +
+        " -- COLOR: Choose any color (default is 'Warm'.            " +        
+        " -- SCENE TRIGGER: If you want a Scene change to turn on lights that were " +
+        "off at time of change, then select 'yes'. If you select 'no', " +
+        "any lights that were already on will immediately change to correct level & color, while any " +
+        "lights that were off will just save the correct level & color."
 
     def pageProperties = [
-        name        : "pageConfigure",
-        title       : "Configure Master Hue, Free Hues, Free Dimmers, and Switches.",
+        name        : "pageSettings",
+        title       : "Scene Settings for Master Hue and any Free Hues, Free Dimmers, and Switches.",
+        nextPage    : "pageOptions",
+        install     : false,
+        uninstall   : state.installed
+    ]
+
+    return dynamicPage(pageProperties) {
+        section("Setting up your scenes", hideable:true, hidden: state.installed) {
+            paragraph textSettings
+        }
+		
+        theModes?.each() {
+    	        def name = it as String
+        	    section("${name} Scene:", hideable:true, hidden: state.installed) {
+            	    name = name.tr(' !+', '___')
+                
+					input "${name}_offTime", "number", title: "Lights should turn OFF after how many minutes without motion?", required: true, defaultValue: 60
+                
+	                settings.hueMaster?.each() {
+                    	paragraph "Master Hue ${it.displayName}"
+    	                input "${it.displayName}_${name}_HMlevel", "number", title: "Level:", required:true, defaultValue: 99
+        	            input "${it.displayName}_${name}_HMcolor", "enum", title: "Color:", required: true, multiple:false, metadata: [values:
+						["Warm", "Soft", "Normal", "Daylight", "Red", "Green", "Blue", "Yellow", "Orange", "Purple", "Pink"]], defaultValue: "Warm"
+                	    input "${it.displayName}_${name}_HMtrig", "enum", title: "Scene Trigger?",
+                    	    metadata:[values: ["yes", "no"]], required:true, defaultValue: "no"
+	                }
+    	            settings.hueFrees?.each() {
+                    	paragraph "Free Hue ${it.displayName}"
+        	            input "${it.displayName}_${name}_HFlevel", "number", title: "Level:", required:true, defaultValue: 99
+            	        input "${it.displayName}_${name}_HFcolor", "enum", title: "Color:", required: true, multiple:false, metadata: [values:
+						["Warm", "Soft", "Normal", "Daylight", "Red", "Green", "Blue", "Yellow", "Orange", "Purple", "Pink"]], defaultValue: "Warm"
+                    	input "${it.displayName}_${name}_HFtrig", "enum", title: "Scene Trigger?",
+                        	metadata:[values: ["yes", "no"]], required:true, defaultValue: "no"
+	                }
+    	            settings.dimFrees?.each() {
+                    	paragraph "Free Dimmer ${it.displayName}"                    
+        	            input "${it.displayName}_${name}_Dlevel", "number", title: "Level:", required:false
+            	        input "${it.displayName}_${name}_Dtrig", "enum", title: "Scene Trigger?",
+                	        metadata:[values: ["yes", "no"]], required:true, defaultValue: "no"                    
+	                }
+    	            settings.switches?.each() {
+                    	paragraph "Switch ${it.displayName}"                    
+        	            input "${it.displayName}_${name}_Strig", "enum", title: "Scene Trigger?",
+            	            metadata:[values: ["yes", "no"]], required:true, defaultValue: "no"
+  					
+					}
+                }
+            
+        }
+    }
+}
+
+private def pageOptions() {
+	TRACE("pageOptions()")
+   
+	def pageProperties = [
+        name        : "pageOptions",
+        title       : "Options.",
         nextPage    : null,
         install     : true,
         uninstall   : state.installed
     ]
 
     return dynamicPage(pageProperties) {
-        section("Scene Settings Instructions") {
-            paragraph textConfig2
-        }
-		
-        section("Scene Settings") {
-	        theModes?.each() {
-    	        def name = it as String
-        	    section("${name} Mode", hideable:true, hidden: state.installed) {
-            	    name = name.tr(' !+', '___')
-                
-					input "${name}_offTime", "number", title: "Turn off lights in __ minutes with no motion?", required: true, defaultValue: 60
-                
-	                settings.hueMaster?.each() {
-    	                input "${it.displayName}_${name}_HMlevel", "number", title: "MASTER ${it.displayName}: Level:", required:true, defaultValue: 99
-        	            input "${it.displayName}_${name}_HMcolor", "enum", title: "MASTER ${it.displayName}: Color:", required: true, multiple:false, metadata: [values:
-						["Warm", "Soft", "Normal", "Daylight", "Red", "Green", "Blue", "Yellow", "Orange", "Purple", "Pink"]], defaultValue: "Warm"
-                	    input "${it.displayName}_${name}_HMtrig", "enum", title: "MASTER ${it.displayName}: Mode Trigger?",
-                    	    metadata:[values: ["yes", "no"]], required:true, defaultValue: "no"
-	                }
-    	            settings.hueFrees?.each() {
-        	            input "${it.displayName}_${name}_HFlevel", "number", title: "FREE ${it.displayName}: Level:", required:true, defaultValue: 99
-            	        input "${it.displayName}_${name}_HFcolor", "enum", title: "FREE ${it.displayName}: Color:", required: true, multiple:false, metadata: [values:
-						["Warm", "Soft", "Normal", "Daylight", "Red", "Green", "Blue", "Yellow", "Orange", "Purple", "Pink"]], defaultValue: "Warm"
-                    	input "${it.displayName}_${name}_HFtrig", "enum", title: "FREE ${it.displayName}: Mode Trigger?",
-                        	metadata:[values: ["yes", "no"]], required:true, defaultValue: "no"
-	                }
-    	            settings.dimFrees?.each() {
-        	            input "${it.displayName}_${name}_Dlevel", "number", title: "${it.displayName} Dimmer Level:", required:false
-            	        input "${it.displayName}_${name}_Dtrig", "enum", title: "Mode Trigger?",
-                	        metadata:[values: ["yes", "no"]], required:true, defaultValue: "no"                    
-	                }
-    	            settings.switches?.each() {
-        	            input "${it.displayName}_${name}_Sstate", "enum", title: "${it.displayName} Switch State:",
-            	            metadata:[values: ["on", "off"]], required:true, defaultValue: "on"
-  					
-					}
-                }
-            }
-        }
-    }
-}
 
+        section([title:"Options", mobileOnly:true]) {
+           	label title:"Assign a name", required:false
+        }
+
+		section {
+            href "pageAbout", title:"About Flexi Lighting", description:"Tap to open"
+        }
+	}
+}
 
 def installed() {
     TRACE("installed()")
@@ -328,6 +354,8 @@ def setTheHueGroup(inMode) {
 
 	String mode = inMode
 
+//	log.debug ("Made it to setTheHueGroup.  Mode is ${mode}.")
+
 	def name = "${hueMaster.displayName}_${mode.tr(' !+', '___')}" as String
 
 	def nameTrig = name +"_HMtrig" as String                
@@ -338,6 +366,7 @@ def setTheHueGroup(inMode) {
              
 	def nameLevel = name +"_HMlevel" as String                
    	def valueLevel = settings[nameLevel] 
+//    log.trace "nameLevel is ${nameLevel} and valueLevel is ${valueLevel}."
 
     def newValueLevel = valueLevel
 	if (newValueLevel > 99) {
@@ -372,57 +401,24 @@ def setTheHueGroup(inMode) {
 	
     allGroup.each {
 		it.saveScene(newValueColor, mode, offTime)
-	
-	// -- and use those settings IF Level=0, ELSE IF light is on, ELSE IF user overrides.
-		if ( newValueLevel == 0 ) {
-        
-			it.setLevel(0)
-		} else {
-        
-		    if ( valueTrig == "no" ) {       
-
-		        if ( it.currentValue("switch") == "off" ) {
-			            
-				} else {
-
-    		        it.setColor(newValueColor)		
-            
-        		}
-        
-        
-			} else {
-		
-			it.setColor(newValueColor)
-        
-			}
+	// -- and use those settings IF Level=0, light is already on, or Scene Trigger.	
+        if (newValueLevel == 0 || valueTrig == "yes" || it.currentValue("switch") == "on" ) {
+			it.setColor(newValueColor)		            
 		}
     }
-    
-    if ( newValueLevel < 21 ) {
-    	newValueLevel = 0
-    }
-    
-    dimSlaves?.each {
-    	it.saveScene(newValueLevel, mode, offTime)
-        
-        if (newValueLevel == 0) {
-        	it.setLevel(0)
-        } else {
-        	if (valueTrig == "no" ) {
-		        if ( it.currentValue("switch") == "off" ) {
-			
-				} else {	
 
-	    	        it.setLevel(newValueLevel)		
-            
-        		}
+// Set Scene Settings for Slave Dimmers
+    dimSlaves?.each {
+                 
+		def newScene = [level: newValueLevel, transitiontime: 2]
+
+        it.saveScene(newScene, mode, offTime)
         
+	// -- and use those settings IF Level=0, light is already on, or Scene Trigger.    	
         
-			} else {
-		
-    	        it.setLevel(newValueLevel)		
-			
-            }
+        if (newValueLevel == 0 || valueTrig == "yes" || it.currentValue("switch") == "on" ) {
+			it.setLevel(newValueLevel)		            
+
 		}               	
     }    
 }
@@ -430,7 +426,7 @@ def setTheHueGroup(inMode) {
 def setTheFreeHues(inMode) {
 
 	String mode = inMode
-    
+   
     def curFState = null
     
 	hueFrees?.each() {
@@ -471,31 +467,14 @@ def setTheFreeHues(inMode) {
 		def newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2]
 
 	    def offTime = state.offTime
+
         it.saveScene(newValueColor, mode, offTime)
         
-	// -- and use those settings IF Level=0, ELSE IF light is on, ELSE IF user overrides.
-		if ( newValueLevel == 0 ) {
-        
-			it.setLevel(0)
-            
-		} else {
-        
-	    	if (valueTrig == "no") {   		        	    	 
-
-        		if (it.currentValue("switch") == "off") {
-           
-	    	    } else {
-            
-					it.setColor(newValueColor)
-	            }
-            
-    	    } else {
-        
-            	it.setColor(newValueColor)
-            
-	        }
+	// -- and use those settings IF Level=0, light is already on, or Scene Trigger.	
+        if (newValueLevel == 0 || valueTrig == "yes" || it.currentValue("switch") == "on" ) {
+			it.setColor(newValueColor)		            
 		}
-	}	
+    }
 }
 
 def colorCheck(inColor) {
@@ -568,10 +547,10 @@ def colorCheck(inColor) {
     
 }
 
-def setTheDimmers(inMode) {
+def setTheFreeDimmers(inMode) {
 
 	String mode = inMode
-       
+    
 	dimFrees?.each() {
 
 		def name = "${it.displayName}_${mode.tr(' !+', '___')}" as String
@@ -587,46 +566,40 @@ def setTheDimmers(inMode) {
         if (newValueLevel > 99) {
             newValueLevel = 99 
         }
-        
-		if ( newValueLevel == 0 ) {
-        
-			it.setLevel(0)
-            
-		} else {
-        
-        	if (valueTrig == "no") {
-            
-        		def curDState  = it.currentValue("switch") as String
-                if ( curDState == "on" || curDState == null) {
-		    	    
-                   	it.setLevel(newValueLevel)		
-				}
-                
-			} else {
-            
-		       	it.setLevel(newValueLevel)		
 
-			}	
-        }        
-	} 
-}            
+// Save Scene Settings 
+                 
+		def newScene = [level: newValueLevel, transitiontime: 2]
+
+	    def offTime = state.offTime
+
+        it.saveScene(newScene, mode, offTime)
+        
+	// -- and use those settings IF Level=0, light is already on, or Scene Trigger.    	
+        
+        if (newValueLevel == 0 || valueTrig == "yes" || it.currentValue("switch") == "on" ) {
+			it.setLevel(newValueLevel)		            
+
+		}               	
+    }    
+}
+            
 
 def setTheSwitches(inMode) {
 
 	String mode = inMode
-
 	switches.each() {
            
 		def name = "${it.displayName}_${mode.tr(' !+', '___')}"	
-		def nameState = name +"_Sstate" as String                
-   		def valueState = settings[nameState]
        	def nameTrig = name +"_Strig" as String                
 	    def valueTrig = settings[nameTrig]
 
-		if (valueState == "off") {
+		if (valueTrig == "no") {
 
 			it.off()
+            
 		} else {       	
+        
    	    	it.on()
 
 	    }    
@@ -634,16 +607,15 @@ def setTheSwitches(inMode) {
 }
 
 // Handle location event.
-def onLocation(evt) {  
-
+def onLocation(evt) {
+    
 	state.currentMode = evt.value
     def curMode = state.currentMode
     def lastMode = state.priorMode
     
 	if (curMode != lastMode ) {
 
-
-		if ( theModes.contains(curMode) ) {           
+		if ( theModes.contains(curMode) ) {          
 			
             def offName = curMode.tr(' !+', '___') + "_offTime" as String 
 			def offValue = settings[offName]
@@ -661,8 +633,8 @@ def onLocation(evt) {
 				setTheFreeHues(curMode)
 	        }
                 
-    	    if (settings.dimmers) {
-        	   setTheDimmers(curMode)
+    	    if (settings.dimFrees) {
+        	   setTheFreeDimmers(curMode)
 	        }    
                 
     	    if (settings.switches) {
@@ -671,11 +643,10 @@ def onLocation(evt) {
         
 			state.priorMode = evt.value as String
     
-		} else {
-
 		}
 	}
 }    
+
 
 private def initialize() {
     log.trace "${app.name}. ${textVersion()}. ${textCopyright()}"
@@ -684,7 +655,6 @@ private def initialize() {
     state.defaultHue = 20
 	state.defaultSat = 80
     state.defaultLevel = 99
-    state.newSlave = []
     
     subscribe(location, onLocation)
 
