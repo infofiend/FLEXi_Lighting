@@ -32,8 +32,9 @@ definition(
     namespace: "info_fiend",
     author: "Anthony Pastor",
     description: "FLEXI Lighting Scenes App:  Set-up & control lighting scenes with " +
-    			 "Hues (use FlexiHue device type), Dimmers (use FlexiDimmer device type), " +
-                 "and/or Switches.  For use with accompanying FLEXI Trigger App.  Find these" +
+    		 "Hues (use FlexiHue device type), Dimmers (create FlexiDimmer device type " +
+    		 "by adding FLEXi code to your existing device type code), " +
+                 "and/or Switches (any Switch device will work).  For use with FLEXI Trigger App.  Find these" +
                  "devices and smartapps at https://github.com/infofiend/FLEXI_Lighting ", 
     category: "Convenience",
 	iconUrl: "https://dl.dropboxusercontent.com/u/2403292/LR%20Scene.png",
