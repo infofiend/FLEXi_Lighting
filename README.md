@@ -1,5 +1,5 @@
 # FLEXI_Lighting 
-Apps, devices, and extras for use with FLEXi Lighting Scenes &amp; Triggers
+FLEXi Lighting Apps, Devices, and examples and extras 
 
 --HOW TO INSTALL--
 
