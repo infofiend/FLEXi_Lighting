@@ -7,7 +7,7 @@ Apps, devices, and extras for use with FLEXi Lighting Scenes &amp; Triggers
 
 2) copy the FLEXiHue device code and create it as a new Device Type in the IDE.
 
-3) If you want to be able to use dimmer lights other than Hue lights (or the Aeon Micro G2 that I use as an example), copy the FLEXi-related attributes and commands into whatever device type code and save as a new device type in IDE.  Be sure to change the name in metadata section to "flexidimmer".  In the FlexiDimmer example, the FLEXi-related code I added is: custom attributes (lines 40-45) and commands (lines 53-63 and lines 387-517).
+3) If you want to be able to use dimmer lights other than Hue lights (or the Aeon Micro G2 that I use as an example), copy the FLEXi-related attributes and commands into whatever device type code and save as a new device type in IDE.  Everything that is needed can be found in the "Use_this_code..." file.  Be sure to change the name in metadata section to "flexidimmer".  In the FlexiDimmer example code, the FLEXi-related code I added is: custom attributes (lines 40-45) and commands (lines 53-63 and lines 387-517).
 
 4) copy the FlexiState device code and create it as a new Device Type in the IDE.  
   ------OR change the subscription in the FLEXi Trigger app to subscribe to presence directly. -----
