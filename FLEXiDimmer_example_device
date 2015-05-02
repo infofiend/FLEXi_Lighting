@@ -5,7 +5,7 @@
  *	--ADDED: custom attributes (lines 40-45) and commands (lines 53-63 and lines 387-517) related to storage of scene setting information (see remarks below)
  *
  *		
- 
+ *
 
 	AEON G2 
 	0x20 Basic
@@ -35,26 +35,26 @@ metadata {
         capability "Energy Meter"
         capability "Power Meter"
         capability "Test Capability"
-
-
+    
+    
 	// "FLEXI"-Related Attributes Added
         attribute "sceneLevel", "number"
 		attribute "sceneSwitch", "string"
         attribute "sceneName", "string"
         attribute "offTime", "number"
 	//  -------------------------------
-
+    
+    
         command "levelUp"
         command "levelDown"
         command "flash", ["string"]  //blink,flasher,strobe
         command "reset"
-
-
+        
 	// "FLEXI"-Related Commands Added
 		command "setOffTime"
 		command "setScName"       
         command "saveScene"
-        command "setScSwitch"
+        command "setScSwitch", ["string"]
         command "sceneManual"
         command "sceneFree"
         command "sceneSlave"
@@ -134,7 +134,7 @@ tiles {
 
 
 
-// NL ADDED TILES
+// FLEXI-related Tiles Added 
 	    valueTile("sceneName", "device.sceneName", decoration: "flat") {
 			state "sceneName", label: 'Scene: ${currentValue}'
 		}
@@ -215,6 +215,137 @@ def zwaveEvent(physicalgraph.zwave.Command cmd) {
     //log.debug "udf:${cmd.inspect()}"
 	return [:]
 }
+
+//
+//
+// "FLEXI"-Related Commands (either added or modified)
+
+def setScSwitch(inState) {
+	log.debug "FlexiAeonDimmer: Executing 'setScSwitch(${inState})'"
+	sendEvent (name: "sceneSwitch", value: inState, isStateChange: true)
+        	          
+}
+
+def sceneManual() {
+//	log.debug "FlexiAeonDimmer: sceneManual setting sceneSwitch to: MANUAL."  
+
+    def curLevel = device.currentValue("level")
+    setScLevel(curLevel)
+    def curSat = device.currentValue("saturation")
+    setScSat(curSat)
+    def curHue = device.currentValue("hue")
+    setScHue(curHue)
+
+	def newValue = "Manual" as String
+    setScSwitch(newValue)
+
+}
+
+def sceneFree() {
+//	log.debug "FlexiAeonDimmer: sceneFree setting sceneSwitch to: FREEEEEE."
+	def newValue = "Freebie" as String
+   	setScSwitch(newValue)
+	refresh()    
+}
+
+def sceneSlave() {
+//	log.debug "FlexiAeonDimmer: sceneSlave setting sceneSwitch to: SLAVE."  
+	def newValue = "Slave" as String
+ 	setScSwitch(newValue)
+	refresh()
+}
+
+def saveScene(Number inValue, String inMode, Number inOffTime) {
+
+	log.debug "FlexiAeonDimmer: saveScene:"
+
+    if ( inMode ) {
+		log.debug "sceneName to: ${inMode}"
+	    sendEvent(name: "sceneName", value: inMode, isStateChange: true)
+    }	
+
+    if ( inOffTime ) {
+  		if ( inOffTime == 0 ) {
+			log.debug "Setting offTime to: default 30 b/c inOffTime is 0."
+		    sendEvent(name: "offTime", value: 30, isStateChange: true)
+    	} else {
+			log.debug "Setting offTime to: ${inOffTime}"
+		    sendEvent(name: "offTime", value: inOffTime, isStateChange: true)
+    	}	
+	}
+
+	if ( inValue ) {
+		sendEvent(name: "sceneLevel", value: inValue.level)
+        log.debug "Setting sceneLevel to: ${inValue}."        
+	}
+	
+}
+
+def setLevel(Number value) {
+
+	setLevel(value, 3)
+
+//Don't request a config report when advanced reporting is enabled
+//	if (settings.param80 in ["Hail","Report"]) zwave.basicV1.basicSet(value: value).format()
+//    else delayBetween ([zwave.basicV1.basicSet(value: value).format(), zwave.basicV1.basicGet().format()], 5000)
+}
+
+def setLevelFromThing(Number inValue) {
+
+//	log.debug "FlexiAeonDimmer: setLevelfromThing setting sceneSwitch to: Manual."  
+	def newValue = "Manual" as String
+    setScSwitch(newValue)
+
+	setLevel(inValue, 3)
+}
+
+
+def setLevel(Number inValue, duration) {
+	if (device.latestValue("switch") == "off" ) {
+		sendEvent(name: "switch", value: "on", isStateChange: true)
+    }
+    
+	sendEvent(name: "level", value: inValue, isStateChange: true)
+    
+    def dimmingDuration = duration < 128 ? duration : 128 + Math.round(duration / 60)
+
+	//Don't request a config report when advanced reporting is enabled
+	if (settings.param80 in ["Hail","Report"]) zwave.switchMultilevelV2.switchMultilevelSet(value: inValue, dimmingDuration: 0).format()
+    else delayBetween ([zwave.switchMultilevelV2.switchMultilevelSet(value: inValue, dimmingDuration: duration).format(), zwave.basicV1.basicGet().format()], 0)
+}
+
+def on() {
+    //reset alarm trigger
+    state.alarmTriggered = 0
+	    
+    def level = device.currentValue("level")
+    if(level == null)
+    {
+    	level = 99
+    }
+    if (device.latestValue("switch") == "off" ) {
+		sendEvent(name: "switch", value: "on", isStateChange: true)
+    }
+    
+    //Don't request a config report when advanced reporting is enabled
+	if (settings.param80 in ["Hail","Report"]) zwave.basicV1.basicSet(value: level).format() 					//value: 0xFF
+    else delayBetween([zwave.basicV1.basicSet(value: level).format(), zwave.basicV1.basicGet().format()], 5000)	//value: 0xFF
+}
+
+def off() {
+    //log.debug "at:${state.alarmTriggered} swf:${state.stateWhenFlashed}"
+    
+    //override alarm off command from smartApps
+    if (state.alarmTriggered == 1 && state.stateWhenFlashed == 1) {
+    	state.alarmTriggered = 0
+    } else {
+    	//Don't request a config report when advanced reporting is enabled
+    	if (settings.param80 in ["Hail","Report"]) zwave.basicV1.basicSet(value: 0x00).format()
+		else delayBetween ([zwave.basicV1.basicSet(value: 0x00).format(),  zwave.basicV1.basicGet().format()], 5000)
+    }
+}
+
+// ----------------------------------
 
 def levelUp(){
 	def int step = (settings.dInterval ?:10).toInteger() //set 10 as default
@@ -382,136 +513,4 @@ def configure() {
 
 
 
-//
-//
-// "FLEXI"-Related Commands (either added or modified)
 
-def setScSwitch(String inState) {
-	log.debug "FlexiAeonDimmer: Executing 'setScSwitch(${inState})'"
-	sendEvent (name: "sceneSwitch", value: inState, isStateChange: true)
-        	          
-}
-
-def sceneManual() {
-//	log.debug "FlexiAeonDimmer: sceneManual setting sceneSwitch to: MANUAL."  
-
-    def curLevel = device.currentValue("level")
-    setScLevel(curLevel)
-    def curSat = device.currentValue("saturation")
-    setScSat(curSat)
-    def curHue = device.currentValue("hue")
-    setScHue(curHue)
-
-	def newValue = "Manual" as String
-    setScSwitch(newValue)
-
-}
-
-def sceneFree() {
-//	log.debug "FlexiAeonDimmer: sceneFree setting sceneSwitch to: FREEEEEE."
-	def newValue = "Freebie" as String
-   	setScSwitch(newValue)
-	refresh()    
-}
-
-def sceneSlave() {
-//	log.debug "FlexiAeonDimmer: sceneSlave setting sceneSwitch to: SLAVE."  
-	def newValue = "Slave" as String
- 	setScSwitch(newValue)
-	refresh()
-}
-
-def saveScene(Number inValue, String inMode, Number inOffTime) {
-
-	log.debug "FlexiAeonDimmer: saveScene:"
-
-    if ( inMode ) {
-		log.debug "sceneName to: ${inMode}"
-	    sendEvent(name: "sceneName", value: inMode, isStateChange: true)
-    }	
-
-    if ( inOffTime ) {
-  		if ( inOffTime == 0 ) {
-			log.debug "Setting offTime to: default 30 b/c inOffTime is 0."
-		    sendEvent(name: "offTime", value: 30, isStateChange: true)
-    	} else {
-			log.debug "Setting offTime to: ${inOffTime}"
-		    sendEvent(name: "offTime", value: inOffTime, isStateChange: true)
-    	}	
-	}
-
-	if ( inValue ) {
-		sendEvent(name: "sceneLevel", value: inValue.level)
-        log.debug "Setting sceneLevel to: ${inValue}."        
-	}
-	
-}
-
-def setLevel(Number value) {
-
-	setLevel(value, 3)
-
-//Don't request a config report when advanced reporting is enabled
-//	if (settings.param80 in ["Hail","Report"]) zwave.basicV1.basicSet(value: value).format()
-//    else delayBetween ([zwave.basicV1.basicSet(value: value).format(), zwave.basicV1.basicGet().format()], 5000)
-}
-
-def setLevelFromThing(Number inValue) {
-
-//	log.debug "FlexiAeonDimmer: setLevelfromThing setting sceneSwitch to: Manual."  
-	def newValue = "Manual" as String
-    setScSwitch(newValue)
-
-	setLevel(inValue, 3)
-}
-
-
-def setLevel(Number inValue, duration) {
-	if (device.latestValue("switch") == "off" ) {
-		sendEvent(name: "switch", value: "on", isStateChange: true)
-    }
-    
-	sendEvent(name: "level", value: inValue, isStateChange: true)
-    
-    def dimmingDuration = duration < 128 ? duration : 128 + Math.round(duration / 60)
-
-	//Don't request a config report when advanced reporting is enabled
-	if (settings.param80 in ["Hail","Report"]) zwave.switchMultilevelV2.switchMultilevelSet(value: inValue, dimmingDuration: 0).format()
-    else delayBetween ([zwave.switchMultilevelV2.switchMultilevelSet(value: inValue, dimmingDuration: duration).format(), zwave.basicV1.basicGet().format()], 0)
-}
-
-def on() {
-    //reset alarm trigger
-    state.alarmTriggered = 0
-	    
-    def level = device.currentValue("level")
-    if(level == null)
-    {
-    	level = 99
-    }
-    if (device.latestValue("switch") == "off" ) {
-		sendEvent(name: "switch", value: "on", isStateChange: true)
-    }
-    
-    //Don't request a config report when advanced reporting is enabled
-	if (settings.param80 in ["Hail","Report"]) zwave.basicV1.basicSet(value: level).format() 					//value: 0xFF
-    else delayBetween([zwave.basicV1.basicSet(value: level).format(), zwave.basicV1.basicGet().format()], 5000)	//value: 0xFF
-}
-
-def off() {
-    //log.debug "at:${state.alarmTriggered} swf:${state.stateWhenFlashed}"
-    
-    //override alarm off command from smartApps
-    if (state.alarmTriggered == 1 && state.stateWhenFlashed == 1) {
-    	state.alarmTriggered = 0
-    } else {
-    	//Don't request a config report when advanced reporting is enabled
-    	if (settings.param80 in ["Hail","Report"]) zwave.basicV1.basicSet(value: 0x00).format()
-		else delayBetween ([zwave.basicV1.basicSet(value: 0x00).format(),  zwave.basicV1.basicGet().format()], 5000)
-    }
-//     if (device.latestValue("switch") == "on" ) {
-//		sendEvent(name: "switch", value: "off", isStateChange: true)
-//    }
-}
-
-// ----------------------------------
