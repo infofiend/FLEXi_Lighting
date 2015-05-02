@@ -2,7 +2,7 @@
  *
  * This is a variation of Mike Maxwell's specific micro driver 1.3 for Aeon Micro G2
  
- *	--ADDED: custom attributes (lines 40-45) and commands (lines 53-63 and lines 387-517) related to storage of scene setting information (see remarks below)
+ *	--ADDED: custom attributes (lines 40-45) and commands (lines 53-63 and lines 221-348) related to storage of scene setting information (see remarks below)
  *
  *		
  *
