@@ -1,7 +1,7 @@
 /** FLEXi Triggers
 	
     
-	Version 1.0 (2015-4-28)
+	Version 1.1 (2015-5-5)
  
    The latest version of this file can be found at:
    https://github.com/infofiend/FLEXi_Lighting/FLEXi_Triggers
@@ -108,29 +108,11 @@ def initialize()
 	subscribe(location, onLocation)
 
 	checkOff()
-    checkHome()
     colorCheck()
 
 }
 
-def switchHome(evt) {
-    if (evt.value == "present") {
-		checkHome()
-    } else {
-    	state.allHome = false
-    }
-}
-
-def peopleHome(evt) {
-    if (evt.value == "on") {
-		checkHome()
-    } else {
-    	state.allHome = false
-    }
-}
-
-
-def checkOff() {   	// Wictor Wictor Nine
+def checkOff() {   	// Wictor Wictor Niner
 	def foundOff = null
 
 	if (hues) {
@@ -143,14 +125,14 @@ def checkOff() {   	// Wictor Wictor Nine
 
 def checkHome() {
 
+	def result = false
+    
    	if (allPeopleHome() && allVirtualHome()) {
     
-        state.allHome = true
-    } else {
-        state.allHome = false
-    }
-
-
+        result = true
+        log.debug "allHome is true"
+	}
+	return result
 }      
 
 
@@ -280,6 +262,8 @@ def turnON() {
             
             if (it.currentValue("switch") == "off") {
             
+            	log.debug "${it.label} is off.  Turning on using appropriate settings."
+            
 	            myScene = it.currentValue("sceneSwitch")
             
 				if ( myScene == "Master" || myScene == "Slave" ) {
@@ -290,6 +274,7 @@ def turnON() {
 						scnSat = state.masterSat as Number
                     
     		            def newValueColor = [hue: scnHue, saturation: scnSat, level: myHueLevel, transitiontime: 2]
+                        log.debug "${it.label} is using Master settings}."
     			        it.setColor(newValueColor)
 					}	
 				} else if ( myScene == "Freebie") {
@@ -299,6 +284,7 @@ def turnON() {
 						scnSat = it.currentValue("sceneSat")
         	              
 						def newValueColor = [hue: scnHue, saturation: scnSat, level: myHueLevel, transitiontime: 2]   		   			
+                        log.debug "${it.label} is Free using its own settings}."                        
 	    	    	    it.setColor(newValueColor)
                 	}
 				} else if ( myScene == "Manual" ) {
@@ -308,6 +294,7 @@ def turnON() {
 						scnSat = it.currentValue("saturation")
 					
 	    	            def newValueColor = [hue: scnHue, saturation: scnSat, level: myHueLevel, transitiontime: 2]   		   			
+                        log.debug "${it.label} is using Manual settings}."                        
  		    	        it.setColor(newValueColor)
 					}
 	            } else { 
@@ -321,6 +308,7 @@ def turnON() {
 	            	    }    
 		            
     	            	def newValueColor = [hue: scnHue, saturation: scnSat, level: myHueLevel, transitiontime: 2]
+                        log.debug "${it.label} is using default settings}."                        
 	 	    	        it.setColor(newValueColor)                    
 					}
             	}            
@@ -341,18 +329,21 @@ def turnON() {
 	
                     myDimLevel = state.masterLevel as Number
                     if (myDimLevel > 0) {
+                        log.debug "${it.label} is using Master settings}."                    
 		                it.setLevel(myDimLevel)		                                
 					}				
 				} else if ( myScene == "Freebie") {
             					
                     myDimLevel = it.currentValue("sceneLevel") 
                     if (myDimLevel > 0) {
+                        log.debug "${it.label} is Free using its own settings}."                    
 		                it.setLevel(myDimLevel)		                                  
 					}            
 				} else if ( myScene == "Manual" ) {
             
 					myDimLevel = it.currentValue("level")   		   			
-                    if (myDimLevel > 0) {                    
+                    if (myDimLevel > 0) {             
+                        log.debug "${it.label} is using Manual settings}."                    
 		                it.setLevel(myDimLevel)		            					
 					}
 	            } else { 
@@ -362,6 +353,7 @@ def turnON() {
 	                    if (myDimLevel > 99) {
     	                	myDimLevel = 99
         	            }    
+                        log.debug "${it.label} is using default settings}."                        
 	        	        it.setLevel(myDimLevel)		            
 					}
 				}				
@@ -383,7 +375,7 @@ def turnON() {
 // Handle motion event.
 def motionHandler(evt) {
 
-	if (state.allHome) {
+	if (checkHome) {
 
 	    if (evt.value == "active") {
 
@@ -395,13 +387,17 @@ def motionHandler(evt) {
         	   state.inactiveAt = now()
                setActiveAndSchedule()
         }       			   
-	}
+        
+	} else {
+    
+		log.debug "Motion event, but checkHome is not true."
+    }    
 }
 
 // Handle contact event.
 def contactHandler(evt) {
 
-	if (state.allHome) {
+	if (checkHome) {
 	    if (evt.value == "open") {
 
 			state.inactiveAt = null
@@ -413,15 +409,22 @@ def contactHandler(evt) {
             state.inactiveAt = now()
         	setActiveAndSchedule()
         }  
-	}
+
+	} else {
+    
+		log.debug "Contact event, but checkHome is not true."
+
+	}    
+    
 }
 
 
 // Handle location event.
 def onLocation(evt) {
-
+    
+	log.debug "Mode change to ${evt.value}."
+    
 	state.currentMode = evt.value
-    String mode = state.currentMode
     
     state.lastMode = state.currentMode
 	state.inactiveAt = now()
@@ -469,6 +472,7 @@ def scheduleCheck() {
         	    }    
 	        }
             state.inactiveAt = null
+            
             
 	    } else {
     
