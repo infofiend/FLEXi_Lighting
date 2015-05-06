@@ -1,6 +1,8 @@
 /**
  *  FLEXiHue Hue Bulb Device Type 
  *
+ *  Version 1.1  (2015-5-5)
+ *
  *  Author: Anthony Pastor
  */
  
@@ -149,7 +151,7 @@ def parse(description) {
 // handle commands
 
 def setScSwitch(String inState) {
-	log.debug "FLEXiHue: Executing 'setScSwitch(${inState})'"
+	log.debug "FLEXiHue(${device.label}): Executing 'setScSwitch(${inState})'"
 	sendEvent (name: "sceneSwitch", value: inState, isStateChange: true)
         	          
 }
@@ -185,39 +187,28 @@ def sceneSlave() {
 
 def saveScene(inValue, String inMode, Number inOffTime) {
 
-	log.debug "FLEXiHue: saveScene:"
+	log.debug "FLEXiHue(${device.label}: saveScene:"
 
-    if ( inMode ) {
-		log.debug "sceneName to: ${inMode}"
-	    sendEvent(name: "sceneName", value: inMode, isStateChange: true)
+	log.debug "sceneName to: ${inMode}"
+	sendEvent(name: "sceneName", value: inMode, isStateChange: true)
+    	
+
+    if (inOffTime == null || inOffTime == 0) {
+		log.debug "Setting offTime to: default 30 b/c inOffTime is null or equal to 0."
+	    sendEvent(name: "offTime", value: 30, isStateChange: true)
+    } else {
+		log.debug "Setting offTime to: ${inOffTime}"
+	    sendEvent(name: "offTime", value: inOffTime, isStateChange: true)
     }	
+		
+    sendEvent(name: "sceneHue", value: inValue.hue)  
+    log.debug "Setting sceneHue to: ${inValue.hue}."
+	sendEvent(name: "sceneSat", value: inValue.saturation)
+    log.debug "Setting sceneSat to: ${inValue.saturation}."
 
-    if ( inOffTime ) {
-  		if ( inOffTime == 0 ) {
-			log.debug "Setting offTime to: default 30 b/c inOffTime is 0."
-		    sendEvent(name: "offTime", value: 30, isStateChange: true)
-    	} else {
-			log.debug "Setting offTime to: ${inOffTime}"
-		    sendEvent(name: "offTime", value: inOffTime, isStateChange: true)
-    	}	
-	}
-	if (!inValue.transitiontime) {
-		inValue << [transitiontime: 3]
-	}
-	
-    if (inValue.hue && inValue.saturation) {
-    
-        sendEvent(name: "sceneHue", value: inValue.hue)  
-        log.debug "Setting sceneHue to: ${inValue.hue}."
-		sendEvent(name: "sceneSat", value: inValue.saturation)
-        log.debug "Setting sceneSat to: ${inValue.saturation}."
-	}
+	sendEvent(name: "sceneLevel", value: inValue.level)
+    log.debug "Setting sceneLevel to: ${inValue.level}."        
 
-	if (inValue.level) {
-		sendEvent(name: "sceneLevel", value: inValue.level)
-        log.debug "Setting sceneLevel to: ${inValue.level}."        
-	}
-	
 }
 
 
@@ -229,17 +220,20 @@ def on() {
 
 def on(Number inTransitionTime) {
 
-	log.debug "FLEXiHue: Executing 'On(transitionTime)'"
+	log.debug "FLEXiHue(${device.label}): 'On(transitionTime)'"
 
-	def theLevel = device.currentValue("level")
-    if(!theLevel) {
-    	level = 99
+	def theLevel = device.currentValue("sceneLevel")
+    log.debug "current sceneLevel value is ${theLevel}."
+    if(theLevel == null) {
+    	theLevel = device.currentValue("level")
+        log.debug "no sceneLevel value, so use current level value of ${theLevel}."
+        if (theLevel == null) {
+        	theLevel = 99
+            log.debug "no sceneLevel or level values, so theLevel defaults to ${theLevel}."
+        }
     }
-    
-	parent.on(this, inTransitionTime, level)
-
-    
-
+    log.trace "...sending to 'setLevel(${theLevel})' with TT."
+	setLevel(theLevel, inTransitionTime) 
 }
 
 def off() {
@@ -250,8 +244,8 @@ def off() {
 
 def off(Number inTransitionTime) {
 
-	log.debug "FLEXiHue: Executing 'Off(transitionTime)'"
-    if (device.latestValue("switch") == "on" ) {
+	log.debug "FLEXiHue(${device.label}): Executing 'Off(transitionTime)'"
+    if (device.currentValue("switch") == "on" ) {
 		sendEvent(name: "switch", value: "off", isStateChange: true)
     }
 	parent.off(this, inTransitionTime)
@@ -265,7 +259,7 @@ def poll() {
 
 def nextLevel() {
 
-	def level = device.latestValue("level") as Integer ?: 0
+	def level = device.currentValue("level") as Integer ?: 0
 	if (level < 100) {
 		level = Math.min(25 * (Math.round(level / 25) + 1), 100) as Integer
 	}
@@ -278,17 +272,19 @@ def nextLevel() {
 def setLevel(Number percent) {
 
 	def transitiontime = 3
-	setLevel(percent, transitiontime)
+	log.trace "...sending to 'setLevel' with TT."
+    setLevel(percent, transitiontime)
 
 }
 
 def setLevel(Number percent, transitiontime) {
 
-	log.debug "FLEXiHue: Executing 'setLevel' w/TT."
+	log.debug "FLEXiHue(${device.label}): Executing 'setLevel(${percent}, ${transitiontime})'."
 
 	sendEvent(name: "switch", value: "on", isStateChange: true)    
 	sendEvent(name: "level", value: percent, isStateChange: true)
-    
+
+	log.trace "Calling 'parent.setLevel(${this}, ${percent}, ${transitiontime})'."
 	parent.setLevel(this, percent, transitiontime)
 }
 
@@ -296,8 +292,10 @@ def setLevelFromThing(Number percent) {
 
 	log.debug "FLEXiHue: setLevelfromThing setting sceneSwitch to: Manual."  
 	def newValue = "Manual" as String
+	log.trace "...calling 'setScSwitch(${newValue})'."    
     setScSwitch(newValue)
 
+	log.trace "...sending to 'setLevel(${percent}, 3)'."
 	setLevel(percent, 3)
     
 }
@@ -306,13 +304,16 @@ def setLevelFromThing(Number percent) {
 def setSaturation(Number percent) {
 
 	def transitiontime = 3
+    log.trace "...sending to 'setSaturation(${percent}, ${transitiontime})'."
 	setSaturation(percent, transitiontime) 
 }
 
 
 def setSaturation(Number percent, transitiontime) {
 
-	log.debug "FLEXiHue: Executing 'setSaturation w/TT'"
+	log.debug "FLEXiHue(${device.label}): Executing 'setSaturation(${percent}, ${transitiontime})'"
+    
+	log.trace "Calling 'parent.setSaturation(${this}, ${percent}, ${transitiontime})'."    
 	parent.setSaturation(this, percent, transitiontime)
 	sendEvent(name: "saturation", value: percent, isStateChange: true)
 
@@ -322,8 +323,10 @@ def setSatFromThing(Number percent) {
 
 	log.debug "FLEXiHue: setSatfromThing setting sceneSwitch to: Manual."  
 	def newValue = "Manual" as String
+	log.trace "...calling 'setScSwitch(${newValue})'."    
     setScSwitch(newValue)
-
+	
+    log.trace "...sending to 'setSaturation(${percent}, 3)'."
 	setSaturation(percent, 3)
 }
 
@@ -331,13 +334,16 @@ def setSatFromThing(Number percent) {
 def setHue(Number percent) {
 
 	def transitiontime = 3
+    log.trace "...sending to 'setHue(${percent}, ${transitiontime})'."
 	setHue(percent, transitiontime)
     
 }
 
 def setHue(Number percent, transitiontime) 
 {
-	log.debug "FLEXiHue: Executing 'setHue' w/TT."
+	log.debug "FLEXiHue(${device.label}): Executing 'setHue(${percent}, ${transitiontime})'."
+
+	log.trace "Calling 'parent.setHue(${this}, ${percent}, ${transitiontime})'."    
 	parent.setHue(this, percent, transitiontime)
 	sendEvent(name: "hue", value: percent, isStateChange: true)
     
@@ -347,19 +353,26 @@ def setHueFromThing(Number percent) {
 
 	log.debug "FLEXiHue: setHuefromThing setting sceneSwitch to: Manual."  
 	def newValue = "Manual" as String
-    setScSwitch(newValue)
+	log.trace "...calling 'setScSwitch(${newValue})'."
+	setScSwitch(newValue)
 
+	log.trace "...sending to 'setHue(${percent}, 3)'."
 	setHue(percent, 3)
 }
 
 
 def setColor(inValue) {
 
-	log.debug "FLEXiHue: setColor: ${inValue}"
-
-
+	log.debug "FLEXiHue(${device.label}): setColor: ${inValue}"
+	def curSWvalue = device.currentValue("switch")
+	log.debug "switch value is currently ${curSWvalue}."
+    
 	if (!inValue.transitiontime) {
 		inValue << [transitiontime: 3]
+	}
+    
+    if (inValue.switch == null) {
+		inValue << [switch: "on"]
 	}
     
 	if (inValue.hex) {
@@ -367,28 +380,23 @@ def setColor(inValue) {
 		sendEvent(name: "color", value: inValue.hex)
         
 	} 
+       
     
-    if (!inValue.switch) {
-    	inValue.switch = "on"
-        log.debug "making sure state matches."
-    }    
-    
-    log.debug "new hue is ${inValue.hue}."    
-	sendEvent(name: "hue", value: inValue.hue)
-
-    log.debug "new saturation is ${inValue.saturation}."    
-    sendEvent(name: "saturation", value: inValue.saturation)
-
-    log.debug "new level is ${inValue.level}."
-	sendEvent(name: "level", value: inValue.level, isStateChange: true)
-
-	def curSWvalue = device.currentValue("switch")
-    log.debug curSWvalue
-	sendEvent(name: "switch", value: "on", isStateChange: true)
-
-    
+    log.debug "Calling 'parent.setColor (${inValue})."    
+  
 	parent.setColor(this, inValue)
+
+	curSWvalue = device.currentValue("switch")
+    log.debug "curSWvalue is now ${curSWvalue}...sending events."
+	
+	sendEvent(name: "hue", value: inValue.hue)
+    sendEvent(name: "saturation", value: inValue.saturation)
+	sendEvent(name: "level", value: inValue.level, isStateChange: true)
+	sendEvent(name: "switch", value: "on", isStateChange: true)
     
+	curSWvalue = device.currentValue("switch")
+    log.debug "Final curSWvalue is ${curSWvalue}."
+
 }
 
 
