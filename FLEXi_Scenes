@@ -307,20 +307,37 @@ private def pageOptions() {
 }
 
 def installed() {
-    TRACE("installed()")
+	state.uninstalled = true
 
-    state.installed = true
     initialize()
-  	
+    TRACE("installed()") 	
 }
 
 def updated() {
-    TRACE("updated()")
 
     unsubscribe()
     initialize()
+    TRACE("updated()")
+    
 }
 
+private def initialize() {
+    log.trace "${app.name}. ${textVersion()}. ${textCopyright()}"
+
+	state.defaultColor = [hue: 20, saturation: 80, level: 99, transitionTime: 2]
+    state.defaultHue = 20
+	state.defaultSat = 80
+    state.defaultLevel = 99
+    
+    subscribe(location, onLocation)
+
+	if (state.uninstalled) {
+    	onLocation(location.mode)
+    }    
+    state.uninstalled = false
+	STATE()
+
+}
 
 def masterSlave(inMode) {
 
@@ -374,13 +391,13 @@ def setTheHueGroup(inMode) {
              
 	def nameLevel = name +"_HMlevel" as String                
    	def valueLevel = settings[nameLevel] as Integer
-//    log.trace "nameLevel is ${nameLevel} and valueLevel is ${valueLevel}."
+    log.trace "nameLevel is ${nameLevel} and valueLevel is ${valueLevel}."
 
     def newValueLevel = valueLevel 
 	if (newValueLevel > 99) {
         newValueLevel = 99             
 	}		                
-			
+	log.trace "newValueLevel is ${newValueLevel}."		
 	def nameColor = name +"_HMcolor" as String
    	def valueColor = settings[nameColor]   		
 	def newHue = state.defaultHue 
@@ -398,7 +415,7 @@ def setTheHueGroup(inMode) {
 // Set & Save Scene Settings 
 	            
 	// Master                
-	def newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2]
+	def newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2, switch: on]
 	def offTimeName = mode +"_offTime" as String
     def offTime = state.offTime
 	log.debug "saving scene - newValueColor is ${newValueColor}."
@@ -435,7 +452,7 @@ def setTheHueGroup(inMode) {
 
 			hueSlaves.each {
 				if (percLevel == 0 || valueTrig == "yes" || it.currentValue("switch") == "on" ) {
-					it.setLevel(percLevel)		            
+					it.setColor(newColor)		            
 				}
         	}
         }    
@@ -648,8 +665,10 @@ def setTheSwitches(inMode) {
 def onLocation(evt) {
     
 	state.currentMode = evt.value
-    def curMode = state.currentMode
+    def curMode = state.currentMode as String
     def lastMode = state.priorMode
+    
+    log.debug "Current mode is ${curMode}."
     
 	if (curMode != lastMode ) {
 
@@ -686,23 +705,8 @@ def onLocation(evt) {
 }    
 
 
-private def initialize() {
-    log.trace "${app.name}. ${textVersion()}. ${textCopyright()}"
-
-	state.defaultColor = [hue: 20, saturation: 80, level: 99, transitionTime: 2]
-    state.defaultHue = 20
-	state.defaultSat = 80
-    state.defaultLevel = 99
-    
-    subscribe(location, onLocation)
-
-	STATE()
-
-}
-
-
 private def textVersion() {
-    def text = "Version 1.0"
+    def text = "Version 1.1"
 }
 
 private def textCopyright() {
