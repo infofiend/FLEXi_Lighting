@@ -1,4 +1,4 @@
-/** FLEXi Triggers
+/** FLEXi Lighting Triggers
 	
     
 	Version 1.1 (2015-5-5)
@@ -30,17 +30,7 @@ definition(
     name: "FLEXi Triggers",
     namespace: "info_fiend",
     author: "Anthony Pastor",
-   description: "If selected presence / virtual presence switch(es) (for virtual presence use device type FLEXiState) is ON,           " +
-    			 "this SmartApp will turn on the selected lights (use device types FLEXiHue, " +
-                 "FLEXiDimmer, and any type of basic switch).  This SmartApp will check the        " +
-                 "FLEXiHue and FLEXiDimmer devices for scene settings (stored by the FLEXi Lighting   " +
-                 "Scenes App) or manually-entered settings (entered in a FLEXi light's individual device tile.   " +
-                 "         ---------------------------------------------------------------       " +
-                 "Once a triggering event occurs, the correct color and levels (from your Scene or Manual settings) " +
-                 "will be used.  In addition, the app asks the user for default settings to use, in the case " +
-                 "neither Scene or Manual settings can be found.                                                    " +
-                 "Finally, this SmartApp will turn off the lights based on the no-motion time limits (either from " +
-                 "the FLEXi Scenes app or from user's default settings in this app.",
+   description: "Version 1.1   (2015-5-5)",
     category: "Convenience",
 	iconUrl: "https://dl.dropboxusercontent.com/u/2403292/Lightbulb.png",
     iconX2Url: "https://dl.dropboxusercontent.com/u/2403292/Lightbulb%20large.png")
