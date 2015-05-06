@@ -1,8 +1,8 @@
 /**
  *  FLEXiHue Service Manager (Hue Connect)
- *
+ *  Version 1.1   (2015-5-5)
+ *  
  *  Author: SmartThings / Anthony Pastor
- *
  *  To-Do:
  *  	- DNI = MAC address
  *
@@ -115,7 +115,7 @@ def bulbDiscovery()
 
 	if((bulbRefreshCount % 3) == 0) {
 		discoverHueBulbs()
-        log.debug "FLEXiHue SM: END DISCOVERY"
+        log.trace "FLEXiHue SM: END DISCOVERY"
 	}
 
 	return dynamicPage(name:"bulbDiscovery", title:"Bulb Discovery Started!", nextPage:"", refreshInterval:refreshInterval, install:true, uninstall: true) {
@@ -166,7 +166,7 @@ private verifyHueBridge(String deviceNetworkId) {
 
 private verifyHueBridges() {
 	def devices = getHueBridges().findAll { it?.value?.verified != true }
-	log.debug "FLEXiHue SM: UNVERIFIED BRIDGES!: $devices"
+	log.trace "FLEXiHue SM: UNVERIFIED BRIDGES!: $devices"
 	devices.each {
 		verifyHueBridge((it?.value?.ip + ":" + it?.value?.port))
 	}
@@ -204,8 +204,8 @@ Map bulbsDiscovered() {
 
 
 def getHueBulbs() {
-	log.debug state.bulbs
-	log.debug "FLEXiHue SM: FLEXiHUE BULBS:"
+	log.trace state.bulbs
+	log.trace "FLEXiHue SM: FLEXiHUE BULBS:"
 	state.bulbs = state.bulbs ?: [:]
 }
 
@@ -269,7 +269,7 @@ def bulbListHandler(evt) {
 		}
 	}
 	state.bulbs = bulbs
-	log.info "FLEXiHue SM:  ${bulbs.size()} bulbs found"
+	log.trace "FLEXiHue SM:  ${bulbs.size()} bulbs found"
 }
 
 
@@ -292,10 +292,10 @@ def addBulbs() {
 				d = addChildDevice("info_fiend", "FLEXiHue Bulb", dni, newHueBulb?.hub, ["label":newHueBulb?.name])
 			}
 
-			log.debug "FLEXiHue SM: created ${d.displayName} with id $dni"
+			log.trace "FLEXiHue SM: created ${d.displayName} with id $dni"
 			d.refresh()
 		} else {
-			log.debug "FLEXiHue SM: found ${d.displayName} with id $dni already exists, type: '$d.typeName'"
+			log.trace "FLEXiHue SM: found ${d.displayName} with id $dni already exists, type: '$d.typeName'"
 			if (bulbs instanceof java.util.Map) {
             	def newHueBulb = bulbs.find { (app.id + "/" + it.value.id) == dni }
 				if (newHueBulb?.value?.type?.equalsIgnoreCase("Dimmable light") && d.typeName == "Hue Bulb") {
@@ -315,21 +315,21 @@ def addBridge() {
 		if(!d) {
 			d = addChildDevice("info_fiend", "FLEXiHue Bridge", selectedHue, vbridge.value.hub, ["data":["mac": vbridge.value.mac]]) // ["preferences":["ip": vbridge.value.ip, "port":vbridge.value.port, "path":vbridge.value.ssdpPath, "term":vbridge.value.ssdpTerm]]
 
-			log.debug "FLEXiHue SM: created ${d.displayName} with id ${d.deviceNetworkId}"
+			log.trace "FLEXiHue SM: created ${d.displayName} with id ${d.deviceNetworkId}"
 
 			sendEvent(d.deviceNetworkId, [name: "networkAddress", value: convertHexToIP(vbridge.value.ip) + ":" +  convertHexToInt(vbridge.value.port)])
 			sendEvent(d.deviceNetworkId, [name: "serialNumber", value: vbridge.value.serialNumber])
 		}
 		else
 		{
-			log.debug "FLEXiHue SM: found ${d.displayName} with id $selectedHue already exists"
+			log.trace "FLEXiHue SM: found ${d.displayName} with id $selectedHue already exists"
 		}
 	}
 }
 
 
 def locationHandler(evt) {
-	log.info "FLEXiHue SM: LOCATION HANDLER: $evt.description"
+	log.trace "FLEXiHue SM: LOCATION HANDLER: $evt.description"
 	def description = evt.description
 	def hub = evt?.hubId
 
@@ -349,13 +349,13 @@ def locationHandler(evt) {
 		else
 		{ // update the values
 
-			log.debug "FLEXiHue SM: Device was already found in state..."
+			log.trace "FLEXiHue SM: Device was already found in state..."
 
 			def d = bridges."${parsedEvent.ssdpUSN.toString()}"
 			def host = parsedEvent.ip + ":" + parsedEvent.port
 			if(d.ip != parsedEvent.ip || d.port != parsedEvent.port || host != state.hostname) {
 
-				log.debug "FLEXiHue SM: Device's port or ip changed..."
+				log.trace "FLEXiHue SM: Device's port or ip changed..."
 				state.hostname = host
 				d.ip = parsedEvent.ip
 				d.port = parsedEvent.port
@@ -365,7 +365,7 @@ def locationHandler(evt) {
 
 				childDevices.each {
 					if (it.getDeviceDataByName("mac") == parsedEvent.mac) {
-						log.debug "updating dni for device ${it} with mac ${parsedEvent.mac}"
+						log.trace "updating dni for device ${it} with mac ${parsedEvent.mac}"
 						it.setDeviceNetworkId((parsedEvent.ip + ":" + parsedEvent.port)) //could error if device with same dni already exists
 					}
 				}
@@ -419,7 +419,7 @@ def locationHandler(evt) {
 			{ //GET /api/${state.username}/lights response (application/json)
 				if (!body?.state?.on) { //check if first time poll made it here by mistake
 					def bulbs = getHueBulbs()
-					log.debug "FLEXiHue SM: Adding bulbs to state!"
+					log.trace "FLEXiHue SM: Adding bulbs to state!"
 					body.each { k,v ->
 						bulbs[k] = [id: k, name: v.name, type: v.type, hub:parsedEvent.hub]
 					}
@@ -530,9 +530,9 @@ def parse(childDevice, description) {
 	if (parsedEvent.headers && parsedEvent.body) {
 		def headerString = new String(parsedEvent.headers.decodeBase64())
 		def bodyString = new String(parsedEvent.body.decodeBase64())
-		log.debug "parse() - ${bodyString}"
+		log.trace "parse() - ${bodyString}"
 		def body = new groovy.json.JsonSlurper().parseText(bodyString)
-		log.debug "FLEXiHue SM: BODY - $body"
+		log.trace "FLEXiHue SM: BODY - $body"
 		if (body instanceof java.util.HashMap)
 		{ //poll response
 			def bulbs = getChildDevices()
@@ -541,10 +541,17 @@ def parse(childDevice, description) {
              for (bulb in body) {
                 def d = bulbs.find{it.deviceNetworkId == "${app.id}/${bulb.key}"}
                  if (d) {
-	               	log.debug "FLEXiHue SM: Reading Poll for Bulbs"
+	               	log.trace "FLEXiHue SM: Reading Poll for Bulbs"
 		            if (bulb.value.state.reachable) {
-		            	sendEvent(d.deviceNetworkId, [name: "switch", value: bulb.value?.state?.on ? "on" : "off"])
-		            	sendEvent(d.deviceNetworkId, [name: "level", value: Math.round(bulb.value.state.bri * 100 / 255)])
+                    	def levelCheck = d.currentValue("level")
+                        def switchCheck = d.currentValue("switch")
+                        if (levelCheck == 0 && switchCheck == "on") {
+                        	log.trace "FLEXiHue SM: Not Changing Switch to off because ${d.displayName} is on & has level 0."
+                        } else {
+                        	log.trace "FLEXiHue SM: Changing Switch & Level values."
+		            		sendEvent(d.deviceNetworkId, [name: "switch", value: bulb.value?.state?.on ? "on" : "off"])
+		            		sendEvent(d.deviceNetworkId, [name: "level", value: Math.round(bulb.value.state.bri * 100 / 255)])
+                        }    
 /**						if (bulb.value.state.sceneSwitch != null) {
                         	log.debug "FLEXiHue SM: updating b/c bulb.value.state.sceneSwitch != null."
                             log.debug "bulb.value.state.offTime is ${bulb.value.state.offTime}, bulb.value.state.sceneSwitch is ${bulb.value.state.sceneSwitch}, and bulb.value.state.sceneName is ${bulb.value.state.sceneName}."
@@ -600,7 +607,7 @@ def parse(childDevice, description) {
 						childDeviceNetworkId += k.split("/")[2]
 						if (!hsl[childDeviceNetworkId]) hsl[childDeviceNetworkId] = [:]
 						eventType = k.split("/")[4]
-						log.debug "FLEXiHue SM: eventType: $eventType"
+						log.trace "FLEXiHue SM: eventType: $eventType"
 						switch(eventType) {
 							case "on":
 								sendEvent(childDeviceNetworkId, [name: "switch", value: (v == true) ? "on" : "off"])
@@ -620,7 +627,7 @@ def parse(childDevice, description) {
 				}
 				else if (payload.error)
 				{
-					log.debug "FLEXiHue SM: JSON error - ${body?.error}"
+					log.error "FLEXiHue SM: JSON error - ${body?.error}"
 				}
 
 			}
@@ -628,55 +635,57 @@ def parse(childDevice, description) {
 			hsl.each { childDeviceNetworkId, hueSat ->
 				if (hueSat.hue && hueSat.saturation) {
 					def hex = colorUtil.hslToHex(hueSat.hue, hueSat.saturation)
-					log.debug "FLEXiHue SM: sending ${hueSat} for ${childDeviceNetworkId} as ${hex}"
+					log.trace "FLEXiHue SM: sending ${hueSat} for ${childDeviceNetworkId} as ${hex}"
 					sendEvent(hsl.childDeviceNetworkId, [name: "color", value: hex])
 				}
 			}
 
 		}
 	} else {
-		log.debug "FLEXiHue SM: parse - got something other than headers,body..."
+		log.trace "FLEXiHue SM: parse - got something other than headers,body..."
 		return []
 	}
 }
 
 def on(childDevice, transitiontime, percent) {
+	log.trace "FLEXiHue SM: executing 'On' with percent ${percent}."
 	def level = Math.min(Math.round(percent * 255 / 100), 255)
 	def value = [on: true, bri: level]
     value.transitiontime = transitiontime * 10
-	log.debug "FLEXiHue SM: Executing 'on'"
+	log.trace "FLEXiHue SM: Executing 'on'"
 	put("lights/${getId(childDevice)}/state", value)
 }
 
 def off(childDevice, transitiontime) {
 	def value = [on: false]
     value.transitiontime = transitiontime * 10
-	log.debug "FLEXiHue SM: Executing 'off'"
+	log.trace "FLEXiHue SM: Executing 'off'"
 	put("lights/${getId(childDevice)}/state", value)
 }
 
-def setLevel(childDevice, percent, transitiontime) {
-	log.debug "FLEXiHue SM: Executing 'setLevel'"
+def setLevel(childDevice, Number percent, Number transitiontime) {
+	log.trace "FLEXiHue SM: Executing 'setLevel'"
+    log.trace "incoming level is ${percent}."
 	def level = Math.min(Math.round(percent * 255 / 100), 255)
-	def value = [bri: level, on: percent > 0, transitiontime: transitiontime * 10]
+	def value = [bri: level, on: percent > 0, transitiontime: transitiontime * 10]					// on: percent > 0
 	put("lights/${getId(childDevice)}/state", value)
 }
 
-def setSaturation(childDevice, percent, transitiontime) {
-	log.debug "FLEXiHue SM: Executing 'setSaturation($percent)'"
+def setSaturation(childDevice, Number percent, Number transitiontime) {
+	log.trace "FLEXiHue SM: Executing 'setSaturation($percent)'"
 	def level = Math.min(Math.round(percent * 255 / 100), 255)
 	put("lights/${getId(childDevice)}/state", [sat: level, transitiontime: transitiontime * 10])
 }
 
 
 def setHue(childDevice, percent, transitiontime) {
-	log.debug "FLEXiHue SM: Executing 'setHue($percent)'"
+	log.trace "FLEXiHue SM: Executing 'setHue($percent)'"
 	def level =	Math.min(Math.round(percent * 65535 / 100), 65535)
 	put("lights/${getId(childDevice)}/state", [hue: level, transitiontime: transitiontime * 10])
 }
 
 def setColor(childDevice, color) {
-	log.debug "FLEXiHue SM: Executing 'setColor($color)'"
+	log.trace "FLEXiHue SM: Executing 'setColor($color)'"
 	def hue =	Math.min(Math.round(color.hue * 65535 / 100), 65535)
 	def sat = Math.min(Math.round(color.saturation * 255 / 100), 255)
 
@@ -684,7 +693,7 @@ def setColor(childDevice, color) {
 	if (color.level != null) {
 		value.bri = Math.min(Math.round(color.level * 255 / 100), 255)
 		value.on = value.bri > 0
-	}
+	}																						// value.on = value.bri > 0
 
 	if (color.transitiontime != null){
 		value.transitiontime = color.transitiontime * 10
@@ -694,7 +703,7 @@ def setColor(childDevice, color) {
 		value.on = color.switch == "on"
 	}
 
-	log.debug "FLEXiHue SM: sending command $value"
+	log.trace "FLEXiHue SM: sending put command $value"
 	put("lights/${getId(childDevice)}/state", value)
 }
 
@@ -721,7 +730,7 @@ private getId(childDevice) {
 
 private poll() {
 	def uri = "/api/${state.username}/lights/"
-	log.debug "GET:  $uri"
+	log.trace "GET:  $uri"
 	sendHubCommand(new physicalgraph.device.HubAction("""GET ${uri} HTTP/1.1
 HOST: ${selectedHue}
 
