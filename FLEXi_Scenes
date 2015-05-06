@@ -1,13 +1,13 @@
 /**
- * FLEXi LIGHTING SCENES
+ * FLEX LIGHTING SCENES
  *
  *
  *
  *
- *  Version 1.0 (2015-4-28)
+ *  Version 1.1 (2015-5-5)
  *
  *  The latest version of this file can be found at:
- *  https://github.com/infofiend/FLEXi_Lighting/FLEXi_Scenes
+ *  https://github.com/infofiend/FLEXI_Lighting/Lighting_Scenes
  *
  *  --------------------------------------------------------------------------
  *
@@ -51,7 +51,7 @@ preferences {
 // Show "Selection of Scenes and Devices" preference page
 private def pageSelect() {
     TRACE("pageSelect()")
-
+    
     if (state.installed == null) {
         // First run - initialize state
         state.installed = false
@@ -244,8 +244,11 @@ private def pageSettings() {
         	    section("${name} Scene:", hideable:true, hidden: state.installed) {
             	    name = name.tr(' !+', '___')
                 
-					input "${name}_offTime", "number", title: "Lights should turn OFF after how many minutes without motion?", required: true, defaultValue: 60
-                
+					input "${name}_offTime", "number", title: "Lights should turn OFF after how many minutes without motion in this scene?", required: true, defaultValue: 60
+                    if (hueSlaves || dimSlaves) {
+                    	input "${name}_slavePercent", "number", title: "What percentage of Master level should any Slave lights use in this scene?", required: true, defaultValue: 100 
+                	}
+                    
 	                settings.hueMaster?.each() {
                     	paragraph "Master Hue ${it.displayName}"
     	                input "${it.displayName}_${name}_HMlevel", "number", title: "Level:", required:true, defaultValue: 99
@@ -325,27 +328,32 @@ def masterSlave(inMode) {
 	hueMaster.setScSwitch("Master")
     
 // Set Slaves
-    
-	hueSlaves?.each {
-        it.setScSwitch("Slave")
+    if (hueSlaves) {
+		hueSlaves?.each {
+    	    it.setScSwitch("Slave")
+	    }
     }
-    
-    dimSlaves?.each {
-    	it.setScSwitch("Slave")
-    }
-        
+
+	if (dimSlaves) {    
+	    dimSlaves?.each {
+    		it.setScSwitch("Slave")
+    	}
+    }    
     
     
 // Set Frees
 
-	hueFrees?.each {
-        it.setScSwitch("Freebie")
-   	}
-
-	dimFrees?.each {
-        it.setScSwitch("Freebie")
-   	}
-
+    if (hueFrees) {
+		hueFrees?.each {
+    	    it.setScSwitch("Freebie")
+	   	}
+	}
+    
+    if (dimFrees) {    
+		dimFrees?.each {
+    	    it.setScSwitch("Freebie")
+	   	}
+	}
 
 }
 
@@ -365,10 +373,10 @@ def setTheHueGroup(inMode) {
 // Determine settings from Master 
              
 	def nameLevel = name +"_HMlevel" as String                
-   	def valueLevel = settings[nameLevel] 
+   	def valueLevel = settings[nameLevel] as Integer
 //    log.trace "nameLevel is ${nameLevel} and valueLevel is ${valueLevel}."
 
-    def newValueLevel = valueLevel
+    def newValueLevel = valueLevel 
 	if (newValueLevel > 99) {
         newValueLevel = 99             
 	}		                
@@ -387,39 +395,64 @@ def setTheHueGroup(inMode) {
 	}
 	
 
-// Set Scene Settings for Master & any Slave Hues/Dimmers
+// Set & Save Scene Settings 
 	            
+	// Master                
 	def newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2]
 	def offTimeName = mode +"_offTime" as String
     def offTime = state.offTime
+	log.debug "saving scene - newValueColor is ${newValueColor}."
+	hueMaster.saveScene(newValueColor, mode, offTime)
+    if (newValueLevel == 0 || valueTrig == "yes" || hueMaster.currentValue("switch") == "on" ) {
+		hueMaster.setColor(newValueColor)		            
 
-	def allGroup = []
-    allGroup.addAll(settings.hueMaster)
-    if (settings.hueSlaves) {
-        allGroup.addAll(settings.hueSlaves)
-	}
-	
-    allGroup.each {
-		it.saveScene(newValueColor, mode, offTime)
-	// -- and use those settings IF Level=0, light is already on, or Scene Trigger.	
-        if (newValueLevel == 0 || valueTrig == "yes" || it.currentValue("switch") == "on" ) {
-			it.setColor(newValueColor)		            
-		}
-    }
+	}               	
 
-// Set Scene Settings for Slave Dimmers
-    dimSlaves?.each {
-                 
-		def newScene = [level: newValueLevel, transitiontime: 2]
-
-        it.saveScene(newScene, mode, offTime)
+    // Slaves
+    if (hueSlaves || dimSlaves) {
+   
+    	def percName = mode.tr(' !+', '___') + "_slavePercent" as String
+        log.debug "percName is ${percName}."
+		def percValue = settings[percName] as Number
+        log.debug "percValue is ${percValue}."        
+        if (percValue > 100 || percValue <= 0 ) {
+        	percValue = 100
+        }    
+        log.debug "newValueLevel is ${newValueLevel}; percValue is ${percValue}."
+        def percLevel1 =  ( (newValueLevel as Number) /100 ) 
+        log.debug "percLevel1 is ${percLevel1}."
+        def percLevel = percLevel1 * percValue 
+//        log.debug "percLevel2 is ${percLevel2}."
+        // percLevel = percLevel2.toInteger()
+        log.debug "percLevel is ${percLevel}."
         
-	// -- and use those settings IF Level=0, light is already on, or Scene Trigger.    	
+        def newColor = [hue: newHue, saturation: newSat, level: percLevel, transitiontime: 2]
+		def newScene = [level: percLevel, transitiontime: 2]
         
-        if (newValueLevel == 0 || valueTrig == "yes" || it.currentValue("switch") == "on" ) {
-			it.setLevel(newValueLevel)		            
+        // Slave Hues
+        if (hueSlaves) {
+	        hueSlaves.saveScene(newColor, mode, offtime)
 
-		}               	
+			hueSlaves.each {
+				if (percLevel == 0 || valueTrig == "yes" || it.currentValue("switch") == "on" ) {
+					it.setLevel(percLevel)		            
+				}
+        	}
+        }    
+        
+
+		// Slave Dimmers
+		if (dimSlaves) { 
+
+	        dimSlaves.saveScene(newScene, mode, offTime)
+            
+            dimSlaves.each {
+            
+    	    	if (percLevel == 0 || valueTrig == "yes" || it.currentValue("switch") == "on" ) {
+					dimSlaves.setLevel(percLevel)		            
+				}               	
+        	}
+        }    
     }    
 }
 
@@ -438,17 +471,21 @@ def setTheFreeHues(inMode) {
 		def nameTrig = name +"_HFtrig" as String                
 	    def valueTrig = settings[nameTrig]
 		def nameLevel = name +"_HFlevel" as String  
+		log.debug "nameLevel is ${nameLevel}."        
+        
    		def valueLevel = settings[nameLevel] 
-
+		log.debug "valueLevel is ${valueLevel}."
+		
 	    def nameColor = name +"_HFcolor" as String
 		def valueColor = settings[nameColor]
 
 	    def newValueLevel = valueLevel 
         newValueLevel = newValueLevel.toInteger()
-        
+
         if (newValueLevel > 99) {
             newValueLevel = 99 
         }
+   		log.debug "newValueLevel is ${newValueLevel}."
             
 		def newHue = state.defaultHue 
  		def	newSat = state.defaultSat 
@@ -465,6 +502,7 @@ def setTheFreeHues(inMode) {
 // Save Scene Settings 
                  
 		def newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2]
+		log.debug "newValueColor is ${newValueColor}."		
 
 	    def offTime = state.offTime
 
