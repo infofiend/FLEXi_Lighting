@@ -1,5 +1,5 @@
 /**
- *  FLEXiHue DEVICE TYPE 
+ *  FLEXiHue Hue Bulb Device Type 
  *
  *  Author: Anthony Pastor
  */
@@ -7,7 +7,7 @@
 // for the UI
 metadata {
 	// Automatically generated. Make future change here.
-	definition (name: "FLEXi Hue Bulb", namespace: "info_fiend", author: "Anthony Pastor") {
+	definition (name: "FLEXiHue Bulb", namespace: "info_fiend", author: "Anthony Pastor") {
 		capability "Switch Level"
 		capability "Actuator"
 		capability "Color Control"
@@ -21,7 +21,7 @@ metadata {
         attribute "sceneLevel", "number"
         attribute "sceneHue", "number"
         attribute "sceneSat", "number"
-
+        attribute "myBackColor", "string"
 		attribute "sceneSwitch", "string"
         attribute "sceneName", "string"
         attribute "offTime", "number"
@@ -29,7 +29,7 @@ metadata {
 		command "setAdjustedColor"      
 		command "setOffTime"
 		command "setScName"
-       
+		command "backgrounderValue"       
         command "saveScene"
         command "setScSwitch"
         command "sceneManual"
@@ -48,9 +48,9 @@ metadata {
 
 // NORMAL CONTROLLERS
 	standardTile("switch", "device.switch", width: 1, height: 1, canChangeIcon: true, canChangeBackground: true) {
-		state "on", label:'${name}', action:"switch.off", icon:"st.lights.philips.hue-single", backgroundColor:"#79b821"
-		state "off", label:'${name}', action:"switch.on", icon:"st.lights.philips.hue-single", backgroundColor:"#ffffff"
-	}
+		state "on", label:'${name}', action:"switch.off", icon:"st.lights.philips.hue-single", backgroundColor: "#79b821"
+		state "off", label:'${name}', action:"switch.on", icon:"st.lights.philips.hue-single", backgroundColor: "#ffffff"
+	} 
 	standardTile("refresh", "device.switch", decoration: "flat") {
 		state "default", label:"", action:"refresh.refresh", icon:"st.secondary.refresh"
 	}
@@ -147,6 +147,7 @@ def parse(description) {
 
 
 // handle commands
+
 def setScSwitch(String inState) {
 	log.debug "FLEXiHue: Executing 'setScSwitch(${inState})'"
 	sendEvent (name: "sceneSwitch", value: inState, isStateChange: true)
@@ -230,13 +231,9 @@ def on(Number inTransitionTime) {
 
 	log.debug "FLEXiHue: Executing 'On(transitionTime)'"
 
-	def level = device.currentValue("level")
-    if(level == null)
-    {
+	def theLevel = device.currentValue("level")
+    if(!theLevel) {
     	level = 99
-    }
-    if (device.latestValue("switch") == "off" ) {
-		sendEvent(name: "switch", value: "on", isStateChange: true)
     }
     
 	parent.on(this, inTransitionTime, level)
@@ -289,10 +286,7 @@ def setLevel(Number percent, transitiontime) {
 
 	log.debug "FLEXiHue: Executing 'setLevel' w/TT."
 
-    if (device.latestValue("switch") == "off" ) {
-		sendEvent(name: "switch", value: "on", isStateChange: true)
-    }
-    
+	sendEvent(name: "switch", value: "on", isStateChange: true)    
 	sendEvent(name: "level", value: percent, isStateChange: true)
     
 	parent.setLevel(this, percent, transitiontime)
@@ -305,6 +299,7 @@ def setLevelFromThing(Number percent) {
     setScSwitch(newValue)
 
 	setLevel(percent, 3)
+    
 }
 
 
@@ -345,6 +340,7 @@ def setHue(Number percent, transitiontime)
 	log.debug "FLEXiHue: Executing 'setHue' w/TT."
 	parent.setHue(this, percent, transitiontime)
 	sendEvent(name: "hue", value: percent, isStateChange: true)
+    
 }
 
 def setHueFromThing(Number percent) {
@@ -372,26 +368,24 @@ def setColor(inValue) {
         
 	} 
     
-    if (inValue.hue) {
-        
-        sendEvent(name: "hue", value: inValue.hue)  				//device.currentValue("hue"))
-
-	}
+    if (!inValue.switch) {
+    	inValue.switch = "on"
+        log.debug "making sure state matches."
+    }    
     
-    if (inValue.saturation) {
-    	
-        sendEvent(name: "saturation", value: inValue.saturation)  	// device.currentValue("saturation"))   
+    log.debug "new hue is ${inValue.hue}."    
+	sendEvent(name: "hue", value: inValue.hue)
 
-	}
+    log.debug "new saturation is ${inValue.saturation}."    
+    sendEvent(name: "saturation", value: inValue.saturation)
 
+    log.debug "new level is ${inValue.level}."
+	sendEvent(name: "level", value: inValue.level, isStateChange: true)
 
-	if (inValue.level) 	{
-		sendEvent(name: "level", value: inValue.level, isStateChange: true)
-	}
-	
-    if (device.latestValue("switch") == "off" ) {
-		sendEvent(name: "switch", value: "on", isStateChange: true)
-    }
+	def curSWvalue = device.currentValue("switch")
+    log.debug curSWvalue
+	sendEvent(name: "switch", value: "on", isStateChange: true)
+
     
 	parent.setColor(this, inValue)
     
