@@ -12,7 +12,7 @@ definition(
 	name: "FLEXiHue (Hue Connect)",
     namespace: "info_fiend",
     author: "Anthony Pastor",
-	description: "Allows you to connect your Philips Hue lights using the FLEXiHue device type (which contains custom attributes and commands for storage of Scene data) with SmartThings and control them from your Things area or Dashboard in the SmartThings Mobile app. Adjust colors by going to the Thing detail screen for your FLEXiHue lights (tap the gear on FLEXiHue tiles).  Please update your Hue Bridge first, outside of the SmartThings app, using the Philips Hue app.",
+	description: " Version 1.1 (2015-5-5):  Allows you to connect your Philips Hue lights using the FLEXiHue device type (which contains custom attributes and commands for storage of Scene data) with SmartThings and control them from your Things area or Dashboard in the SmartThings Mobile app. Adjust colors by going to the Thing detail screen for your FLEXiHue lights (tap the gear on FLEXiHue tiles).  Please update your Hue Bridge first, outside of the SmartThings app, using the Philips Hue app.",
 	category: "SmartThings Labs",
 	iconUrl: "https://s3.amazonaws.com/smartapp-icons/Partner/hue.png",
 	iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Partner/hue@2x.png"
