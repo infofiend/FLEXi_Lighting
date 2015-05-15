@@ -189,7 +189,7 @@ def parse(value) {
 // FLEXi Commands
 
 def setScSwitch(String inState) {
-	log.debug "FLEXiHue(${device.label}): Executing 'setScSwitch(${inState})'"
+	log.debug "FLEXiLiFX(${device.label}): Executing 'setScSwitch(${inState})'"
 	sendEvent (name: "sceneSwitch", value: inState, isStateChange: true)
         	          
 }
@@ -407,7 +407,7 @@ def setHue(Number percent, transitiontime)
 
 def setHueFromThing(Number percent) {
 
-	log.debug "FLEXiHue: setHuefromThing setting sceneSwitch to: Manual."  
+	log.debug "FLEXiLiFX: setHuefromThing setting sceneSwitch to: Manual."  
 	def newValue = "Manual" as String
 	log.trace "...calling 'setScSwitch(${newValue})'."
 	setScSwitch(newValue)
@@ -463,4 +463,30 @@ def refresh() {
 
 def poll() {
     refresh()
+}
+
+def setAdjustedColor(value) {
+
+	log.debug "FLEXiLiFX: setAdjustedColor: ${value}"
+	def adjusted = value + [:]
+	adjusted.hue = adjustOutgoingHue(value.hue)
+	adjusted.level = null // needed because color picker always sends 100
+	setColor(adjusted)
+}
+
+def adjustOutgoingHue(percent) {
+	def adjusted = percent
+	if (percent > 31) {
+		if (percent < 63.0) {
+			adjusted = percent + (7 * (percent -30 ) / 32)
+		}
+		else if (percent < 73.0) {
+			adjusted = 69 + (5 * (percent - 62) / 10)
+		}
+		else {
+			adjusted = percent + (2 * (100 - percent) / 28)
+		}
+	}
+	log.info "FLEXiLiFX: percent: $percent, adjusted: $adjusted"
+	adjusted
 }
