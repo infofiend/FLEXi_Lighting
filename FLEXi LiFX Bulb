@@ -253,7 +253,7 @@ def saveScene(inValue, String inMode, Number inOffTime) {
 
 
 
-private sendAdjustedColor(data, transitio) {
+private sendAdjustedColor(data, transitiontime) {
     def hue = Math.ceil(data.hue*3.6)
     def saturation = data.saturation/100
     def brightness = data.level/100
