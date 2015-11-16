@@ -1,7 +1,7 @@
-/** FLEXi Triggers
+/** FLEXi Triggers NEW
 	
     
-	Version 1.4 (2015-11-4)
+	Version 1.4 (2015-11-15)
  
    The latest version of this file can be found at:
    https://github.com/infofiend/FLEXi_Lighting/FLEXi_Triggers
@@ -27,7 +27,7 @@
  **/
 
 definition(
-    name: "FLEXi Triggers",
+    name: "FLEXi Triggers NEW",
     namespace: "info_fiend",
     author: "Anthony Pastor",
    description: "ChildApp to FLEXi Lighting Scenes. " + 
@@ -36,7 +36,7 @@ definition(
                  "light(s).  Once a triggering event occurs, the Lighting Scene from Parent      " +
                  "App will be applied. " ,
     category: "Convenience",
-    parent: "info_fiend:FLEXi Lighting Scenes",
+    parent: "info_fiend:FLEXi Lighting Scenes NEW",
 	iconUrl: "https://dl.dropboxusercontent.com/u/2403292/Lightbulb.png",
     iconX2Url: "https://dl.dropboxusercontent.com/u/2403292/Lightbulb%20large.png")
 
@@ -79,43 +79,7 @@ private def	pageSettings() {
         required:   true, 
         submitOnChange: true 
     ]
-    
-/**	def inputPresence = [
-    	name        : "presence",
-        type        : "capability.presenceSensor",
-        title       : "Presence Sensors:",
-        multiple:   true,
-        required:   true //, submitOnChange: true 
-    ]    
-       
-    def inputVirtual = [
-        name        : "virtual",
-        type        : "device.flexistate",
-        title       : "Virtual Presence Switches:",
-        multiple:   true,
-        required:   false, 
-        submitOnChange: true 
-    ]
-    
-    def inputMotions = [
-        name        : "motions",
-        type        : "capability.motionSensor",
-        title       : "Select motion detector(s):",
-        multiple:   true,
-        required:   false, 
-        submitOnChange: true 
-    ]
-    
-    def inputContacts = [
-        name        : "contacts",
-        type        : "capability.contactSensor",
-        title       : "Select contact detector(s):",
-        multiple:   true,
-        required:   false, 
-        submitOnChange: true 
-    ]
-
-**/
+   
 
 	def inputHues = [
         name        : "hues",
@@ -159,9 +123,7 @@ private def	pageSettings() {
         
 			section("2. Select Presence Sensors: ALL need to be home for triggers to fire:") {
     	        input "presence", "capability.presenceSensor", title: "Presence Sensors:", multiple:   true, required: true, submitOnChange: true
-//        	    input inputVirtual
-//				def inputPresCheck = []
-//                inputPresCheck == presence 
+
 	        }
  			
             if ( presence ) {
@@ -206,35 +168,6 @@ private def	pageOptions() {
         uninstall   : state.installed
 	]
 
-/**
-    def inputAbortToggle = [
-        name        : "abortToggle",
-        type        : "capability.momentary",
-        title       : "Identify the No-Motion Off Abort Toggle:",
-        multiple:   false,
-        required:   false
-    ]
-    
-    def inputAbortTime = [
-        name        : "abortTime",
-        type        : "number",
-        title       : "How long should app check for abort (minutes)?",
-        multiple:   false,
-        required:   true,
-        defaultValue: 	2
-    ]
-
-
-    def inputAbortLength = [
-        name        : "abortLength",
-        type        : "number",
-        title       : "How long should No-Motion events be ignored upon Abort? (minutes):",
-        multiple:   false,
-        required:   true,
-        defaultValue: 	30        
-    ]
-
-**/
 
 	def inputDefLevel = [
         name        : "defLevel",
@@ -280,13 +213,7 @@ private def	pageOptions() {
            	label title:"Assign a Name", required:true, defaultValue: "${defAppName}", submitOnChange: true
         }               
         
-/**		section("2. User Abort Options", hideable:true, hidden: true) {
-            input inputAbortToggle
-            input inputAbortTime
-            input inputAbortLength            
-        }
-**/        
-        section("3. (Optional) defaults", hideable:true, hidden: true) {
+        section("2. (Optional) defaults", hideable:true, hidden: true) {
             input inputDefLevel
             input inputDefColor
             input inputDefSwitch
@@ -332,7 +259,6 @@ def initialize()
 	log.debug "the Child Modes are ${state.theChildModes}."
     
     
-//	subscribe(virtual, "switch", checkHome)
     subscribe(people, "presence", checkHome)
     
     if (hues) {
@@ -346,10 +272,6 @@ def initialize()
     	subscribe(contacts, "contact", contactHandler)
     }
 
-/**	if (abortToggle) {
-    	subscribe(abortToggle, "momentary.pushed", abortHandler)       
-    }
-**/	
 
 	subscribe(location, onLocation)
 
@@ -363,18 +285,6 @@ def checkOff() {   	// Wictor Wictor Niner
 	def modeOffTime = parent.sendChildOffInfo(theCurMode) as Number
     log.debug "checkOFF:  Parent Lighting App returned offTime of ${modeOffTime} for mode ${theCurMode}."
 
-/**	def offTime = defOffTime 
-
-	def foundOff = hues.find{it.currentValue("sceneSwitch") == "Master"} 
-
-    if (foundOff) {
-    	offTime = foundOff.currentValue("offTime") 
-		log.debug "The Master light is ${foundOff}.  Using the Offtime for that light."        
-    } else {
-		log.debug "No Master light found.  Using the default Offtime."    
-    }
-**/
-
     return modeOffTime  
 
 }
@@ -383,7 +293,7 @@ def checkHome() {
 
 	def result = false
     
-   	if (allPeopleHome() && allVirtualHome()) {
+   	if (allPeopleHome() ) {
     
         result = true
         log.debug "allHome is true"
@@ -404,21 +314,6 @@ def allPeopleHome() {
 	log.debug "allPeopleHome: $result"
 	return result
 }
-
-def allVirtualHome() {
-
-	def result = true
-	for (person in virtual) {
-		if (person.currentValue("switch") == "off") {
-			result = false
-			break
-		}
-	}
-	log.debug "allVirtualHome: $result"
-	return result
-}
-
-
 
 def colorCheck() {
 
@@ -507,7 +402,7 @@ def levelCheck(evt) {
     	    log.trace "LevelCheck: The switch for ${theLight} was physically turned on."
         
 			pause(1000)
-	        turnON()
+        turnON()
     	    state.lastCheck = now()
         }
     }    
@@ -517,56 +412,76 @@ def levelCheck(evt) {
 def turnON() {							// YEAH, baby!
  
 	def theMode = location.mode as String // state.currentMode as String 
-    
- 	def myScene = null
-	def masterLight = null    
+    def masterName = null    
+    def slaveNames = null  
+    def freeNames = null    
 
-    masterLight = hues.find{it.currentValue("sceneSwitch") == "Master"}
-      	log.debug "masterLight is ${masterLight}."
-        
-	def masterName = masterLight.displayName
+    masterName = parent.sendChildLightsByType("hueMaster") as String  		// hues.find{it.currentValue("sceneSwitch") == "Master"}
       	log.debug "masterName is ${masterName}."        
         
-	if (hues) {
-	
-        hues?.each {
-           	def myHueLevel = null                         
-            def scnHue = null
-			def scnSat = null
-       	    def scnType = null
-                      
-            myScene = it.currentValue("sceneSwitch")
-           	log.debug "${it.label} sceneSwitch is ${myScene}."
-                
-			if ( myScene == "Master" || myScene == "Slave" ) {
+    def totalMSLights = []
+    totalMSLights << masterName
 
-				def masterData = parent.sendChildMasterInfo(masterName, theMode) 
-                    	log.debug "${app.label}: turnON : masterData is ${masterData}."                        
+	def masterData = parent.sendChildMasterInfo(masterName, theMode) 
+    log.debug "${app.label}: turnON : masterData is ${masterData}."    
     
-                myHueLevel = masterData.level 
-                    	log.debug "${app.label}: turnON : masterData.level is ${masterData.level}."                        
-                        
-	            log.debug "${it.label} sceneSwitch is ${myScene}."
-                    
+    slaveNames = parent.sendChildLightsByType("hueSlaves") as String  	
+	log.debug "slaveNames is/are ${slaveNames}."            
+        
+	if (slaveNames) {
+    
+    	def slaveLights = []
+            slaveNames?.each { slaveLights << "$it" }
 
-	   			scnHue = masterData.hue 
-                    	log.debug "${app.label}: turnON : masterData.hue is ${masterData.hue}."                                        
-				scnSat = masterData.saturation 
-                    	log.debug "${app.label}: turnON : masterData.saturation is ${masterData.saturation}."                                        
+        totalMSLights << slaveLights
+        
+    }
 
-				scnType = "Master"
+    def msLevel = null                         
+    def msHue = null
+	def msSat = null
+                      
+    msLevel = masterData.level 
+    log.debug "${app.label}: turnON : masterData.level is ${msLevel}."                        
+                       
+					//            log.debug "${it.label} sceneSwitch is ${myScene}."                  
+	msHue = masterData.hue 
+    log.debug "${app.label}: turnON : masterData.hue is ${msHue}."                                        
+	msSat = masterData.saturation 
+	log.debug "${app.label}: turnON : masterData.saturation is ${msSat}."                                        
 
-            } else if ( myScene == "Freebie") {
+	def newValueColor = [hue: msHue, saturation: msSat, level: msLevel, transitiontime: 2, switch: "on"]
+    masterName.setColor(newValueColor)
+//    slaveNames.each?
+    
+	slaveNames?.each {
+    
+		log.debug "${it.displayName} is using ${masterName}'s settings of ${[newValueColor]}."                        
+  	    it.setColor(newValueColor)      
+	}
+    
+
+	freeNames = parent.sendChildLightsByType("hueFrees") as String  	
+	    log.debug "freeNames is/are ${freeNames}." 
             
-				def freeData = parent.sendChildFreeInfo(it.displayName, theMode)
+	if (freeNames) {
+    
+		def freeData = []
+        
+    	freeNames?.each {       
+
+			freeData = parent.sendChildFreeInfo("$it", theMode)
                 
-            myHueLevel = freeData.level as Number             
-
-	   			scnHue = freeData.hue as Number
-				scnSat = freeData.saturation as Number
-
-				scnType = "Free"
-
+            freeLevel = freeData.level as Number             
+   			freeHue = freeData.hue as Number
+			freeSat = freeData.saturation as Number
+            
+            newValueColor = [hue: freeHue, saturation: freeSat, level: freeLevel, transitiontime: 2, switch: "on"]
+            it.setColor(newValueColor)
+        }        
+    }
+   
+/**		}
 			} else if ( myScene == "Manual" ) {
 
 				myHueLevel = it.currentValue("level")   		   			
@@ -575,6 +490,8 @@ def turnON() {							// YEAH, baby!
 				scnSat = it.currentValue("saturation")
 
 				scnType = "Manual"
+
+
 
             } else { 
 				myHueLevel = defLevel as Number 
@@ -595,7 +512,9 @@ def turnON() {							// YEAH, baby!
 
 		}
     }
-    
+
+**/
+
     if (dimmers) {
             
        	dimmers?.each {
@@ -733,7 +652,7 @@ def contactHandler(evt) {
 			log.debug "Contact event, but checkHome is not true."
 
 		}    
-    } else {        
+} else {        
     
     	log.trace "onContact:  Current mode of ${currentMode} is NOT within ${app.label}'s selected modes}." 
 	
@@ -801,42 +720,15 @@ def scheduleCheck() {
         if (elapsed >= threshold) {                     
             log.debug "scheduleCheck: elapsed > threshold.  Running turningOff."
             
-    //    	if (abortToggle && checkHome) {
-//            if (checkHome) {
-            							// check for previous abort within abortLength minutes
-//				if (noPrevAbort) {
-
-//       				sendPush("ST Trig No Motion from ${motions.label} -- abort?") 
-//					state.abortWindow = "Valid"        
-        	        
-//                	unschedule("turningOff")
-//            	    def abortWindow = abortTime as Number
-//	                abortWindow = abortWindow * 60            
-			    
-//    	           	runIn (abortWindow, "turningOff")                            
-                    
-//                } else {
-//                 	log.debug "scheduleCheck:  Previous abort still active - do nothing."
-	      	    	                 
-//                }
-                
-//   		    } else if (!checkHome) {
-            	
-//	           	log.debug "scheduleCheck:  No one home - turn off now."
-      	    	turningOff()
+  	    	turningOff()
         
-//           	} else if (!abortToggle) {
-                            
-//                log.debug "scheduleCheck:  no abortToggle found - turn off now."
-//	            turningOff()
-                    
-//        	}    
             
-                } else {
+        } else {
         
-                setActiveAndSchedule()
+            setActiveAndSchedule()
         
         }
+        
     } else {
     	log.debug "scheduleCheck:  state.inactiveAt is null, so setting it = now()."
     	state.inactiveAt = now()
@@ -844,62 +736,6 @@ def scheduleCheck() {
     
     }    
 }
-
-/**
-def noPrevAbort() {
-
-	def result = false
-    
-    if (state.timeOfAbort) {    
-	
-    	def abElapsed = now() - state.timeOfAbort
-		def abThreshold = 60000 * abortLength
-//	    log.debug "elapsed = ${abElapsed} / abort threshold = ${abThreshold}."
-		
-    	if (abElapsed >= abThreshold) {                     
-			result = true 
-		
-		}
-        
-    } else {    
-		result = true 
-        
-	}
-    log.debug "noPrevAbort is ${result}."
-	return result
-
-}
-
-def abortHandler(evt) {
-
-	log.trace "abortHandler:  abortToggle pushed. "
-    log.debug "Receieved evt is ${evt} & evt.value is ${evt.value}."
-
-    if (state.abortWindow == "Valid") {
-    
-    	unschedule("turningOff")
-		state.abortWindow = null
-		sendNotificationEvent("Abort received - will ignore No Motion events for ${abortLength} mins.")         
-        log.trace "abortHandler:  Received abort command within the abortWindow.  Unscheduling turningOff()."
-		state.timeOfAbort = now()
-        
-        runIn (abortLength, "clearAbort") 
-        
-    } else {
-    
-        log.trace "abortHandler:  Received abort command, but not within the abortWindow."
-    }    
-    
-}
-
-def clearAbort() {
-
-	state.timeOfAbort = null
-    scheduleCheck()
-
-}
-
-**/
 
 def turningOff () {
 
@@ -937,8 +773,3 @@ private def STATE() {
     log.trace "settings: ${settings}"
     log.trace "state: ${state}"
 }
-
-
-
-
-

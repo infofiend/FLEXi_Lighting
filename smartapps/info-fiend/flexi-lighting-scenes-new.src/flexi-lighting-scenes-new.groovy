@@ -1,10 +1,10 @@
 /**
- * FLEX LIGHTING SCENES 
+ * FLEX LIGHTING SCENES NEW
  *
  *
  *
  *
-*  Version 1.4 (2015-11-9)
+*  Version 1.4 (2015-11-15)
  *
  *  The latest version of this file can be found at:
  *  https://github.com/infofiend/FLEXi_Lighting/blob/master/FLEXi_Scenes
@@ -32,7 +32,7 @@
  */
 
 definition(
-    name: "FLEXi Lighting Scenes",
+    name: "FLEXi Lighting Scenes NEW",
     namespace: "info_fiend",
     author: "Anthony Pastor",
     description: "FLEXI Lighting Scenes App:  Set-up & control lighting scenes with " +
@@ -82,7 +82,7 @@ private def	pageChildApps() {
     return dynamicPage(pageProperties) {
 
 		section {
-			app(name: "childApps", appName: "FLEXi Triggers", namespace: "info_fiend", title: "Customize / Select Triggers:", multiple: true)
+			app(name: "childApps", appName: "FLEXi Triggers NEW", namespace: "info_fiend", title: "Customize / Select Triggers:", multiple: true)
 	    }
 	}
 }
@@ -95,7 +95,16 @@ private def pageSelect() {
     if (state.installed == null) {
         // First run - initialize state
         state.installed = false
+        state.selectNext = "pageSettings"
+        
+        state.availHues = []
+        state.theHueLights = []
+        state.hueMaster = []
+        state.hueSlaves = []
+        state.hueFrees = []
+        
         return pageAbout()
+       
     }
 
 	def textSelect =	
@@ -112,93 +121,136 @@ private def pageSelect() {
     def pageProperties = [
         name        : "pageSelect",
         title       : "Config Page 1: Select Scenes and Devices",
-        nextPage    : "pageSettings",
+	    nextPage    : "pageSettings",
         install     : false,
-            uninstall   : state.installed
-    ]
-    
-	def inputModes = [
-        name        : "theModes",
-        type        : "mode",
-        title       : "Select the MODES (set up manually) that you want to use to control Lighting Scenes.  " +
-        				"IMPORTANT: Selecting 'All Modes' will cause this app to not work properly.",
-        multiple:   true,
-        required:   true
-    ]
-    
-    def inputHueMaster = [
-        name        : "hueMaster",
-        type        : "device.flexihueBulb",
-        title       : "Select a 'Master' Hue light (required):",
-        multiple:   false,
-        required:   true
+        uninstall   : state.installed
     ]
 
-    def inputHueSlaves = [
-        name        : "hueSlaves",
-        type        : "device.flexihueBulb",
-        title       : "Select 'Slave' Hue lights (optional):",
-        multiple:   true,
-        required:   false
-    ]
-
-    def inputHueFrees = [
-        name        : "hueFrees",
-        type        : "device.flexihueBulb",
-        title       : "Select 'Free' Hue lights (optional):",
-        multiple:   true,
-        required:   false
-    ]
-
-    def inputDimSlaves = [
-        name        : "dimSlaves",
-        type        : "device.flexidimmer",
-        title       : "Select Slave Dimmers (optional):",
-        multiple:   true,
-        required:   false
-    ]
-
-    def inputDimFrees = [
-        name        : "dimFrees",
-        type        : "device.flexidimmer",
-        title       : "Select Free Dimmers (optional):",
-        multiple:   true,
-        required:   false
-    ]
-    
-    def inputSwitches = [
-        name        : "switches",
-        type        : "capability.switch",
-        title       : "Select non-FLEXi Switches (optional):",
-        multiple:   true,
-        required:   false
-    ]
+	
 
     return dynamicPage(pageProperties) {
-		section("Selection of Scenes and Devices", hideable:true, hidden: state.installed) {
+		section("Selection of Scenes and Master Devices", hideable:true, hidden: state.installed) {
     		 paragraph textSelect 
         }     
     
 		section("1: Scenes") {
-            input inputModes
+            input "theModes", "mode", title: "Select the MODES (set up manually) that you want to use to control Lighting Scenes.  " +
+        				"IMPORTANT: Selecting 'All Modes' will cause this app to not work properly.", multiple: true, required: true, submitOnChange: true 
         }
-        section("2: Master Hue") {
-            input inputHueMaster
-        }
-        section("3: Slave / Free Hues") {
-            input inputHueSlaves
-            input inputHueFrees
-        }
-        section("4: Slave / Free Dimmers") {
-            input inputDimSlaves
-            input inputDimFrees
-        }
-        section("5: Switches") {        
-            input inputSwitches
-		}
         
-    }
+   		section("2: Identify ALL ST-Connected lights (any Type) in the room", hidable: true, hidden: state.installed) {
+    	
+        	input "allSTLights", "capability.switch", title: "Scene Lights:", multiple: true, required: true, submitOnChange: true
+
+	    }
+          
+	    if (allSTLights) {       
+			
+        	settings.theHueLights = []
+
+			settings.allSTLights?.each {
+    	   		def testAttr = it.hasCapability("Color Control")
+	//    	   	log.debug "Does ${it.displayName} have colorControl?  ${testAttr}."
+    	   		if ( testAttr ) {
+        	   		settings.theHueLights << it
+		        }
+    		}
+//            settings.theHueLights == theHueLights
+        
+	    	log.debug "theHueLights (Completed) = ${settings.theHueLights}."            
+			
+//    	    log.debug "state.theHueLights = ${state.theHueLights}."            
+			
+
+			if (settings.theHueLights) {
+	        	section( "3: Identify the 'Master' Hue Light") {
+					def optNames = getTheHueNames()
+                    log.debug "optNames are ${optNames}." 
+		        	input "theMaster", "enum" , title: "Select a 'Master' Hue light (required):", multiple: false, options: optNames.sort(), required: true, submitOnChange: true
+				}				
+                
+                if (theMaster) {
+                
+	                settings.theNonMasters = []
+                    settings.myMaster = []
+    	            settings.theHueLights?.each {
+
+                    	if (it.displayName != theMaster ) {
+                        	settings.theNonMasters << it
+                        } else {
+                        	settings.myMaster << it
+                        }    
+                    }    
+        	        log.debug "settings.theNonMasters are ${settings.theNonMasters}."
+                
+            	    section( "3: Identify the 'Slave' Hue Light(s): ") {
+						def optSlNames = getTheSlNames()
+                    	log.debug "optSlNames are ${optSlNames}." 
+			        	input "theSlaves", "enum" , title: "Select Light(s) (optional):", multiple: true, options: optSlNames.sort(), required: false, submitOnChange: true
+					}
+                 
+                 	
+                    settings.theNonMstrSlvs = []
+                    settings.mySlaves = []
+    	            settings.theNonMasters?.each {
+
+                    	if ( !theSlaves.contains(it.displayName) ) {
+                        	settings.theNonMstrSlvs << it
+                        } else {
+                        	settings.mySlaves << it
+                        }    
+                    }
+                    
+                    log.debug "settings.theNonMstrSlvs are ${settings.theNonMstrSlvs}."
+                    
+                 	section( "3: Identify the 'Free' Hue Light(s): ") {
+						def optFrNames = getTheFrNames()
+                    	log.debug "optFrNames are ${optFrNames}." 
+			        	input "theFrees", "enum" , title: "Select Light(s) (optional):", multiple: true, options: optFrNames.sort(), required: false, submitOnChange: true
+					}
+                    
+                    settings.myFrees = []
+                    settings.myUnused = []
+                    settings.theNonMstrSlvs?.each { 
+                    
+                    	if ( theFrees.contains(it.displayName) ) {
+                        	settings.myFrees << it
+                        } else {
+                        	settings.myUnused << it
+                        }
+                    }    
+                    
+    		   	}
+                log.debug "settings.myMaster is ${settings.myMaster}." 
+				log.debug "settings.mySlaves is/are ${settings.mySlaves}." 
+                log.debug "settings.myFrees is/are ${settings.myFrees}." 
+                log.debug "settings.myUnused is/are ${settings.myUnused}."                 
+	      	}	
+		}	
+	}	
+		
+        
+            
+log.trace "1."            
+//		section("4: Other Slave or Free Hues?", hideable:true, hidden: checkMaster() ) {
+                
+    //                    input "otherHues", "enum", title: "Please select:", multiple: false, options: ["None", "Only Slave Hues", "Only Free Hues", "Both"], 
+    //                	required: true, defaultValue: "None"
+
+ //       }    
+        	
+log.trace "2."            
+        
+
+
+        
+        
+    
+log.trace "3."        
 }
+
+  
+
 
         
 
@@ -237,15 +289,116 @@ private def pageAbout() {
     }
 }
 
-def getNextPage() {
+def checkModes()  {
 
-def thePage = "pageSelect"
-    if (settings.hueMaster) {
-    	thePage = "pageOptions"
+	def anyModes = true
+    if (theModes) {
+    	anyModes = false
+    }
+    return anyModes
+}
+
+def checkLights() {
+
+	def anyLights = true
+    if (allSTLights) {
+    	anyLights = false
+    }
+    return anyLights
+}
+
+def checkMaster() {
+
+	def anyMaster = true
+    if (settings.theMaster) {
+    	anyMaster = false
+    }
+    return anyMaster
+}
+
+def getTheHueNames() {
+
+	def theLights = settings.theHueLights
+	def theHueNames = []
+   	theLights.each {theHueNames << it.displayName}
+    if (theHueNames) {
+	    log.debug "getTheHueNames: (Completed) = ${theHueNames}."
+    }    
+    
+    return theHueNames
+}  
+
+def getTheSlNames() {
+
+	def theLights = settings.theNonMasters
+	def theSlNames = []
+   	theLights.each {theSlNames << it.displayName}
+    if (theSlNames) {
+	    log.debug "getTheSlNames: (Completed) = ${theSlNames}."
+    }    
+    
+    return theSlNames
+}  
+
+def getTheFrNames() {
+
+	def theLights = settings.theNonMstrSlvs
+	def theFrNames = []
+   	theLights.each {theFrNames << it.displayName}
+    if (theFrNames) {
+	    log.debug "getTheFrNames: (Completed) = ${theFrNames}."
+    }    
+    
+    return theFrNames
+}  
+/** 
+def afterSelect() {
+
+	def thePage = "pageSettings"
+    if (otherHues == "Only Free Hues") {
+    	state.freeHues = state.availHues
+        log.debug "only free hues, so state.freeHues = ${state.freeHues}."
+	} else if (otherHues == "Only Slave Hues" ) {
+	   	state.slaveHues = state.availHues
+        log.debug "only slave hues, so state.slaveHues = ${state.slaveHues}."        
+    }
+    if (otherHues == "Both" ) {
+    	thePage = "pageSlaves"
+        log.debug "both free & slave hues, so going to pageSlaves = ${state.freeHues}."        
     }
     thePage
 }    
+**/
 
+def getNextPage() {
+
+	def thePage = "pageSelect"
+    if (state.hueMaster) {
+    	thePage = "pageOptions"
+	}
+    thePage as String
+}    
+
+// Show "pageSlaves" preference page
+private def pageSlaves() {
+    TRACE("pageSlaves()")
+
+//    def textSlaves =
+
+    def pageProperties = [
+        name        : "pageSlaves",
+        title       : "Choose Slave or Free.",
+        nextPage    : "pageSettings",
+        install     : false,
+        uninstall   : state.installed
+    ]
+
+    return dynamicPage(pageProperties) {
+
+
+	}
+    
+}
 
 // Show "Scene Settings" preference page
 private def pageSettings() {
@@ -399,14 +552,42 @@ def sendChildTheModes() {
 
 def sendChildLightsByType (String inType) {
 
-	String theType = inType
-    def theLights = []
-
-    settings.${inType}.each() {theLights << "$it"}
+	def theLights = []
+    theLights = "NONE FOUND"
     
+ 	switch (inType) {
+    	
+        case "hueMaster":
+        
+        	theLights = hueMaster
+            break;
+            
+        case "hueSlaves":
+       		if (hueSlaves) { 
+	        	theLights = hueSlaves
+            }    
+            break;
+            
+		case "hueFrees":
+    		if (hueFrees) {
+	        	theLights = hueFrees
+            }    
+            break;
+    
+    }
+    
+	log.debug "${app.label}:  The ${inType} Light(s) is/are ${theLights}."
     return theLights
-    
-	log.debug "${app.label}:  The ${theType} Light(s) is/are ${theLights}."
+/**        
+    //String theType = "${inType}" 
+        
+    def theLights = "${inType// []
+
+    //"${theType}".each() { theLights << it.displayName }
+
+    return theLights
+**/        
+
 }
 
 def sendChildSwitchState(String incomingName, String inMode) {
@@ -489,8 +670,21 @@ def sendChildMasterInfo (String incomingName, inMode) {
 
 	}
 
-	def newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2, switch: on]
+	def nameTrig = name +"_HMtrig" as String                
+    def valueTrig = settings[nameTrig]
+    
+    def newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2, switch: "on"]
+/**    
+    if ( valueTrig == "yes" ) { 
+    
+		newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2, switch: "on"]
 
+	} else {
+    
+   		newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2, switch: "off"]
+    }
+**/
+	log.debug "${app.label} has a value of ${newValueColor} for MASTER ${incomingName} during mode ${inMode}."    
 	return newValueColor
 }
 
@@ -521,12 +715,33 @@ def sendChildFreeInfo (String incomingName, inMode) {
             			                   
 	}
 
-	def newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2, switch: on]
-	log.debug "${app.label} has a value of ${newValueColor} for ${incomingName} during mode ${inMode}."
+	def nameTrig = name +"_HFtrig" as String                
+    def valueTrig = settings[nameTrig]
+    def newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2, switch: "on"]
+/**    
+    if ( valueTrig == "yes" ) { 
+    
+		newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2, switch: "on"]
+
+	} else {
+    
+   		newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2, switch: "off"]
+    }
+**/
+	log.debug "${app.label} has a value of ${newValueColor} for FREE ${incomingName} during mode ${inMode}."
 
 	return newValueColor
 }
 
+def sendChildTheOffs() {
+
+	def theOffHues = huesOff
+    return theOffHues
+
+}
+
+
+/**
 def masterSlave(inMode) {
 
 // Set Master     
@@ -560,7 +775,16 @@ def masterSlave(inMode) {
 	   	}
 	}
 
+// Set Offs
+
+    if (huesOff) {
+		huesOff?.each {
+    	    it.setScSwitch("OFF")
+	   	}
+	}
+
 }
+**/
 
 def setTheHueGroup(inMode) {
 
@@ -606,13 +830,13 @@ def setTheHueGroup(inMode) {
 	def newValueColor = [hue: newHue, saturation: newSat, level: newValueLevel, transitiontime: 2]
 	def offTimeName = mode +"_offTime" as String
     def offTime = state.offTime
-	log.debug "saving scene - newValueColor is ${newValueColor}."
-	hueMaster.saveScene(newValueColor, mode, offTime)
+//	log.debug "saving scene - newValueColor is ${newValueColor}."
+//	hueMaster.saveScene(newValueColor, mode, offTime)
     
     log.debug "Master ${hueMaster.label} newValueLevel is ${newValueLevel}, valueTrig is ${valueTrig}, and is currently ${hueMaster.currentValue('switch')}."
     if (hueMaster.currentValue("level") > 0 ) {
     
-	    log.debug "Past level > 0, so setting ${hueMaster.label} to ${newValueColor}."
+	    log.debug "Existing level > 0, so setting ${hueMaster.label} to ${newValueColor}."
         hueMaster.setColor(newValueColor)
         
     }
@@ -641,8 +865,7 @@ def setTheHueGroup(inMode) {
         def percLevel1 =  ( (newValueLevel as Number) /100 ) 
         log.debug "percLevel1 is ${percLevel1}."
         def percLevel = percLevel1 * percValue 
-//        log.debug "percLevel2 is ${percLevel2}."
-        // percLevel = percLevel2.toInteger()
+
         log.debug "percLevel is ${percLevel}."
         
         def newColor = [hue: newHue, saturation: newSat, level: percLevel, transitiontime: 2]
@@ -651,13 +874,13 @@ def setTheHueGroup(inMode) {
         // Slave Hues
         if (hueSlaves) {
 			log.debug "newColor is ${newColor}, mode is ${mode}, and offTime is ${offTime}."		        
-			hueSlaves.saveScene(newColor, mode, offTime)
+//			hueSlaves.saveScene(newColor, mode, offTime)
 
 			hueSlaves.each {
 			    log.debug "Slave ${it.label} percLevel is ${percLevel}, valueTrig is ${valueTrig}, and is currently ${it.currentValue('switch')}."            
 			    if (it.currentValue("level") > 0 ) {
 			      	it.setColor(newColor)
-				    log.debug "Past Level > 0, so immediately setting ${it.label} to ${newColor}."
+				    log.debug "Existing Level > 0, so immediately setting ${it.label} to ${newColor}."
 
 			    } else if ( valueTrig == "yes"  ) { 
 			    	newColor.switch == "on"    
@@ -671,7 +894,7 @@ def setTheHueGroup(inMode) {
 		// Slave Dimmers
 		if (dimSlaves) { 
 
-	        dimSlaves.saveScene(newScene, mode, offTime)
+//	        dimSlaves.saveScene(newScene, mode, offTime)
             
             dimSlaves.each {
             
@@ -680,7 +903,7 @@ def setTheHueGroup(inMode) {
                 if (it.currentValue("level") > 0 ) {
 					
                     dimSlaves.setLevel(percLevel)		            
-			        log.debug "Past level > 0, so immediately setting Slave ${it.label} to ${newColor}."                    
+			        log.debug "Existing level > 0, so immediately setting Slave ${it.label} to ${newColor}."                    
 				
                 } else if ( valueTrig == "yes"  ) { 
 			    	newColor.switch == "on"    
@@ -701,7 +924,7 @@ def setTheFreeHues(inMode) {
     
 	hueFrees?.each() {
 
-// Determine Free Hue Settings       	         
+	// Determine Free Hue Settings       	         
         
 		def name = "${it.displayName}_${mode.tr(' !+', '___')}" as String
 
@@ -742,14 +965,15 @@ def setTheFreeHues(inMode) {
 	    def offTime = state.offTime
 		log.debug "newValueColor is ${newValueColor}, mode is ${mode}, and offTime is ${offTime}."		        
 
-        it.saveScene(newValueColor, mode, offTime)
+//        it.saveScene(newValueColor, mode, offTime)
 	    log.debug "Free ${it.label} newValueLevel is ${newValueLevel}, valueTrig is ${valueTrig}, and is currently ${it.currentValue('switch')}."                                
+
         
 	// -- and use those settings *IF* levelof light is currently > 0 or Scene Trigger is 'Yes'.	
         if (it.currentValue("level") > 0 ) {    
 			it.setColor(newValueColor)	
            
-	        log.debug "Past level > 0, so immediately setting Free ${it.label} to ${newValueColor}."                    
+                log.debug "Existing level > 0, so immediately setting Free ${it.label} to ${newValueColor}."                    
             
 		} else if ( valueTrig == "yes" ) { 
 	    	newValueColor.switch == "on"    
@@ -850,6 +1074,8 @@ def setTheFreeDimmers(inMode) {
             newValueLevel = 99 
         }
 
+
+/**
 // Save Scene Settings 
                  
 		def newScene = [level: newValueLevel, transitiontime: 2]
@@ -858,9 +1084,12 @@ def setTheFreeDimmers(inMode) {
 
         it.saveScene(newScene, mode, offTime)
 	    log.debug "Free ${it.label} newValueLevel is ${newValueLevel}, valueTrig is ${valueTrig}, and is currently ${it.currentValue('switch')}."
-        
+**/        
+
+	    def offTime = state.offTime
+
 	// -- and use those settings *IF* levelof light is currently > 0 or Scene Trigger is 'Yes'.	
-        
+
         if (it.currentValue("level") > 0 ) {
 			
             it.setLevel(newValueLevel)		            
@@ -918,7 +1147,7 @@ def onLocation(evt) {
             state.offTime = offValue
 		    log.debug "${curMode} offTime is ${offValue}."            
             
-			masterSlave(curMode)
+//			masterSlave(curMode)
         
     		if (settings.hueMaster) {
 				setTheHueGroup(curMode)
@@ -937,7 +1166,11 @@ def onLocation(evt) {
     	    if (settings.switches) {
 				setTheSwitches(curMode)
 			}
-        
+			
+            if (huesOff) {
+				huesOff.off()
+			}        
+            
 			state.priorMode = evt.value as String
     
 		}
@@ -950,7 +1183,7 @@ private def textVersion() {
 }
 
 private def textCopyright() {
-    def text = "Copyright (c) October 2015 Anthony Pastor"
+    def text = "Copyright (c) November 2015 Anthony Pastor"
 }
 
 private def textLicense() {
@@ -958,7 +1191,7 @@ private def textLicense() {
         "This program is free software: you can redistribute it and/or " +
         "modify it under the terms of the GNU General Public License as " +
         "published by the Free Software Foundation, either version 3 of " +
-        "the License, or (at your option) any later version.\n\n" +
+        "the License, or (at your option) any later version." +
         "This program is distributed in the hope that it will be useful, " +
         "but WITHOUT ANY WARRANTY; without even the implied warranty of " +
         "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU " +
